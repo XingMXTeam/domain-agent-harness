@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["20", "22"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查
+        run: npm run typecheck
+
+      - name: 单元测试
+        run: npm test
+
+      - name: 构建
+        run: npm run build
+
+      - name: 校验构建产物包含域资产
+        run: |
+          test -f dist/prompts/catalog.md
+          test -f dist/domains/build/schemas/plan.schema.json
+          test -f dist/domains/gop/pipelines/deployment.pipeline.yaml
+          test -f dist/domains/qa/skills/query/spec.md
+
+      - name: 冒烟测试 CLI
+        run: node dist/index.js --list-domains
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 扫描不应出现在仓库里的内网地址
+        run: |
+          if git grep -nIE 'alibaba-inc|alibaba\.com|anpm\.|\.aliyun\.com' -- \
+             ':!package-lock.json' ':!.github/workflows/ci.yml'; then
+            echo "::error::检测到疑似内网地址，请脱敏后再提交"
+            exit 1
+          fi
+
+      - name: 扫描不应出现在仓库里的内部标识
+        run: |
+          if git grep -nIE '\bGCP\b|gcp-cc|@ali/' -- \
+             ':!package-lock.json' ':!.github/workflows/ci.yml'; then
+            echo "::error::检测到疑似内部标识，请脱敏后再提交"
+            exit 1
+          fi
+
+      - name: 扫描不应硬编码的密钥
+        run: |
+          if git grep -nIE '(sk-|ghp_|gho_|xox[baprs]-)[A-Za-z0-9_-]{16,}' -- \
+             ':!package-lock.json'; then
+            echo "::error::检测到疑似硬编码密钥"
+            exit 1
+          fi

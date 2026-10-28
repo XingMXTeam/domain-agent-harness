@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "platform": {
+      "type": "http",
+      "url": "{{PLATFORM_MCP_URL:https://mcp.example.com/platform/mcp}}",
+      "headers": {
+        "PRIVATE-TOKEN": "{{PLATFORM_MCP_TOKEN}}"
+      }
+    },
+    "locale": {
+      "type": "http",
+      "url": "{{LOCALE_MCP_URL:https://mcp.example.com/locale/mcp}}",
+      "headers": {
+        "PRIVATE-TOKEN": "{{LOCALE_MCP_TOKEN}}"
+      }
+    }
+  }
+}

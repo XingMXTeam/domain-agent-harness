@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "campaign": {
+      "type": "http",
+      "url": "{{CAMPAIGN_MCP_URL:https://mcp.example.com/campaign/mcp}}",
+      "headers": {
+        "PRIVATE-TOKEN": "{{CAMPAIGN_MCP_TOKEN}}"
+      }
+    },
+    "knowledge": {
+      "type": "http",
+      "url": "{{KM_MCP_URL:https://mcp.example.com/knowledge/mcp}}",
+      "headers": {
+        "PRIVATE-TOKEN": "{{KM_MCP_TOKEN}}"
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "deployment-report",
+  "type": "object",
+  "required": ["ok", "checked"],
+  "additionalProperties": true,
+  "properties": {
+    "ok": { "type": "boolean" },
+    "checked": { "type": "integer", "minimum": 0 },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["floorName", "level", "message"],
+        "additionalProperties": true,
+        "properties": {
+          "floorName": { "type": "string" },
+          "level": { "type": "string", "enum": ["error", "warning", "info"] },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}

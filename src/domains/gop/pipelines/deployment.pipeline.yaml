@@ -1,0 +1,38 @@
+# 主流水线 —— plan → style → floors → review
+name: deployment
+description: 投放主流程：规划 → 建样式包 → 建排期 → 发布 → 校验
+
+steps:
+  - name: plan
+    agent: agents/deployment-planner.md
+    schema: schemas/deployment-plan.schema.json
+    output: deployment_plan
+    description: 只读知识库，产出投放计划
+
+  - name: style
+    agent: agents/style-builder.md
+    input: deployment_plan
+    schema: schemas/style-results.schema.json
+    output: style_results
+    description: 为每个楼层创建样式包
+
+  - name: schedule
+    agent: agents/schedule-builder.md
+    input: style_results
+    schema: schemas/schedule-result.schema.json
+    output: schedule_results
+    description: 为楼层配置排期
+
+  - name: publish
+    agent: agents/floor-publisher.md
+    input: schedule_results
+    schema: schemas/publish-result.schema.json
+    output: publish_results
+    description: 发布楼层
+
+  - name: review
+    agent: agents/deployment-reviewer.md
+    input: publish_results
+    schema: schemas/deployment-report.schema.json
+    output: deployment_report
+    description: 只读校验投放结果

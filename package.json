@@ -1,0 +1,63 @@
+{
+  "name": "domain-agent-harness",
+  "version": "0.1.0",
+  "description": "多域 Agent Harness —— 统一域路由(Catalog) + 双执行引擎(session / pipeline)，面向活动搭建、只读答疑、声明式投放流水线的开源实现",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "dah": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "src",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "tsx src/index.ts",
+    "test": "tsx --test test/*.test.ts",
+    "test:watch": "tsx --test --watch test/*.test.ts",
+    "harness": "tsx src/index.ts",
+    "prepublishOnly": "npm run build",
+    "smoke": "npm run build && node scripts/smoke-e2e.mjs",
+    "verify": "npm run typecheck && npm test && npm run build && node scripts/smoke-e2e.mjs"
+  },
+  "keywords": [
+    "agent",
+    "harness",
+    "multi-domain",
+    "orchestration",
+    "pipeline",
+    "mcp",
+    "llm",
+    "catalog-router"
+  ],
+  "author": "XingMXTeam",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/XingMXTeam/domain-agent-harness.git"
+  },
+  "bugs": {
+    "url": "https://github.com/XingMXTeam/domain-agent-harness/issues"
+  },
+  "homepage": "https://github.com/XingMXTeam/domain-agent-harness#readme",
+  "dependencies": {
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

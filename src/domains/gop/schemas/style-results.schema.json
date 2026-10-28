@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "style-results",
+  "type": "object",
+  "required": ["results"],
+  "additionalProperties": true,
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["floorName", "success"],
+        "additionalProperties": true,
+        "properties": {
+          "floorName": { "type": "string" },
+          "stylePackageId": { "type": "string" },
+          "success": { "type": "boolean" },
+          "error": { "type": "string" }
+        }
+      }
+    }
+  }
+}

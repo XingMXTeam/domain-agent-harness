@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "plan.json",
+  "description": "活动搭建计划 —— 模型产出、Executor 执行",
+  "type": "object",
+  "required": ["setup"],
+  "additionalProperties": true,
+  "properties": {
+    "setup": {
+      "type": "object",
+      "required": ["childScene"],
+      "additionalProperties": true,
+      "properties": {
+        "childScene": {
+          "type": "object",
+          "required": ["name"],
+          "additionalProperties": true,
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "nations": { "type": "string" },
+            "countryTimeRef": { "type": "string" }
+          }
+        },
+        "initModulePool": { "type": "boolean" }
+      }
+    },
+    "phases": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["startTime", "endTime"],
+        "properties": {
+          "startTime": { "type": "string" },
+          "endTime": { "type": "string" }
+        }
+      }
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "nations": { "type": "string" },
+          "floors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "template": {
+                  "type": "object",
+                  "required": ["name"],
+                  "additionalProperties": true,
+                  "properties": {
+                    "name": { "type": "string", "minLength": 1 },
+                    "version": { "type": "string" }
+                  }
+                },
+                "floorSetting": { "type": "object" },
+                "hidden": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schedules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "nations": { "type": "array", "items": { "type": "string" } },
+          "pageName": { "type": "string" },
+          "floorName": { "type": "string" },
+          "contentData": { "type": "object" }
+        }
+      }
+    },
+    "points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

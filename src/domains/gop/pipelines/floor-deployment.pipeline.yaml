@@ -1,0 +1,17 @@
+# 子流水线 —— schedule → publish
+name: floor-deployment
+description: 单楼层投放子流程：配排期 → 发布，可被主流水线按楼层 foreach 展开
+
+steps:
+  - name: schedule
+    agent: agents/schedule-builder.md
+    schema: schemas/schedule-result.schema.json
+    output: schedule_result
+    description: 为单个楼层配置排期
+
+  - name: publish
+    agent: agents/floor-publisher.md
+    input: schedule_result
+    schema: schemas/publish-result.schema.json
+    output: publish_result
+    description: 发布单个楼层

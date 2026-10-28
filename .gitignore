@@ -1,0 +1,36 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# build output
+dist/
+*.tsbuildinfo
+
+# runtime artifacts (per-run traces / logs / generated mcp configs)
+.runs/
+runs/
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# environment
+.env
+.env.*
+!.env.example
+
+# editor
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+
+# test / coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# local scratch
+tmp/
+scratch/

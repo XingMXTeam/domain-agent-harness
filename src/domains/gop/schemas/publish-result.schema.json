@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "publish-result",
+  "type": "object",
+  "required": ["results"],
+  "additionalProperties": true,
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["floorName", "published"],
+        "additionalProperties": true,
+        "properties": {
+          "floorName": { "type": "string" },
+          "published": { "type": "boolean" },
+          "floorId": { "type": "string" },
+          "error": { "type": "string" }
+        }
+      }
+    }
+  }
+}
