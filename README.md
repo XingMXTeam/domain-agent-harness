@@ -18,9 +18,18 @@
 |---|---|---|
 | 判断用户意图属于哪个域 | **Catalog**（一次轻量 LLM 调用） | 域之间共享一个入口，路由后可分派到不同引擎 |
 | 域内该走哪个 skill | **brain.md**（一次轻量 LLM 调用） | 域内再分一次，避免单域 Prompt 膨胀 |
-| 产出结构化计划 | **LLM + JSON Schema** | 计划与执行解耦，产出可校验、可 diff |
+| 产出结构化计划 | **模型 + JSON Schema** | 计划与执行解耦，产出可校验、可 diff |
 | 真正调用平台接口 | **代码（并发执行器）** | 模型不直接写接口，减少幻觉、重试与幂等可控 |
 | 事后校验 | **Review Agent（只读）** | 与执行解耦，校验不复用执行路径 |
+
+### 性能
+
+32 个页面的搭建任务：
+
+| 方案 | 耗时 |
+|---|---|
+| 模型逐一执行 | ~60-120 min |
+| 三阶段（模型规划 + 代码并发 + 模型审查） | **~5-7 min** |
 
 一句话：**LLM 只出计划，代码只做执行**。
 
@@ -41,7 +50,9 @@
   - Streamable HTTP 与 stdio 两种传输；工具名统一 `mcp__<server>__<tool>`
   - 失败自动重试 + 会话重建
 - **并发执行器**
-  - 分层并发 + 并发上限；单点失败不扩散
+  - 分层并发 + 并发上限（默认 8）；单点失败不扩散
+- **三阶段模型**
+  - Plan（模型）→ Execute（代码并发）→ Review（模型只读审查）
 - **可审计**
   - 每次运行落盘 `trace.jsonl` 与会话记录，stderr 是日志、stdout 是结构化进度
 
@@ -147,9 +158,13 @@ brain.md 路由 → init
 init/spec.md 产出 plan.json ──schema 校验──┐
                                             ↓
                                    executor 分层执行（代码并发）
+                                            ↓
+                                   init/review.md 只读审查
 ```
 
-适合「一次决策 + 一次批量写入」的场景。
+即 **Plan（模型）→ Execute（代码并发）→ Review（模型只读审查）** 三阶段。
+
+适合「一次决策 + 一次批量写入」的场景。审查阶段与执行解耦：它只看结果，不复用执行路径，因此不会因为执行失败而失效。
 
 ### pipeline 引擎（声明式）
 
@@ -237,7 +252,7 @@ npm run build       # 编译 + 复制域资产到 dist/
 
 | 文档 | 内容 |
 |---|---|
-| [`docs/architecture.md`](docs/architecture.md) | 整体架构、请求生命周期、扩展点 |
+| [`docs/architecture.md`](docs/architecture.md) | 三阶段模型、设计理念、性能对比、扩展点 |
 | [`docs/plan-json-schema.md`](docs/plan-json-schema.md) | plan.json 结构规范与 Executor 分层 |
 | [`docs/pipeline.md`](docs/pipeline.md) | YAML 流水线规范与 Schema 契约 |
 | [`docs/configuration.md`](docs/configuration.md) | 全部环境变量与 MCP 配置 |

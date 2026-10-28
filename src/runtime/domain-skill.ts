@@ -31,7 +31,7 @@ export async function runDomainSkill(
   domainName: string,
   ctx: RunContext,
   options: RunDomainSkillOptions = {},
-): Promise<string> {
+): Promise<DomainSkillOutcome> {
   const invoke = options.invoke ?? invokeSession;
   const domainDir = getDomainDir(domainName);
   const specPath = join(domainDir, "skills", skill, "spec.md");
@@ -53,15 +53,22 @@ export async function runDomainSkill(
   const parsed = extractJson(result.output);
 
   if (skill === "init") {
-    const summary = await runInit(skill, parsed, domainName, ctx);
-    return summary;
+    return await runInit(skill, parsed, domainName, ctx);
   }
   if (skill === "fix") {
     return await runFix(skill, parsed, ctx);
   }
 
   log(`[domain:${domainName}] skill ${skill} 已完成（未定义代码执行阶段）`);
-  return result.output;
+  return { summary: result.output, execution: parsed };
+}
+
+/** 域内 skill 的产出 */
+export interface DomainSkillOutcome {
+  /** 人类可读摘要 */
+  summary: string;
+  /** 结构化执行结果，交给 Review 阶段 */
+  execution: unknown;
 }
 
 /** init：校验 plan.json 并交给域 executor 执行 */
@@ -70,7 +77,7 @@ async function runInit(
   plan: unknown,
   domainName: string,
   ctx: RunContext,
-): Promise<string> {
+): Promise<DomainSkillOutcome> {
   const domainDir = getDomainDir(domainName);
   const schemaPath = join(domainDir, "schemas", "plan.schema.json");
 
@@ -99,7 +106,7 @@ async function runInit(
   for (const item of failed) {
     lines.push(`- [${item.step}] ${item.target}: ${item.error ?? "失败"}`);
   }
-  return lines.join("\n");
+  return { summary: lines.join("\n"), execution };
 }
 
 /** fix：模型给出动作列表，逐条调用 */
@@ -107,7 +114,7 @@ async function runFix(
   skill: string,
   payload: unknown,
   ctx: RunContext,
-): Promise<string> {
+): Promise<DomainSkillOutcome> {
   const { ToolRunner } = await import("./tool-runner.js");
   const actions = extractActions(payload);
   const runner = await ToolRunner.open(ctx);
@@ -124,7 +131,8 @@ async function runFix(
     await runner.close();
   }
   log(`[domain:fix] skill ${skill} 执行完成（${actions.length} 个动作）`);
-  return `修复动作 ${actions.length} 个已执行`;
+  const summary = `修复动作 ${actions.length} 个已执行`;
+  return { summary, execution: { success: true, items: actions, summary } };
 }
 
 interface FixAction {

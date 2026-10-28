@@ -171,12 +171,52 @@ export async function orchestrate(
   const runDir = join(RUNS_ROOT, runId);
   mkdirSync(runDir, { recursive: true });
 
+  const startedAt = new Date().toISOString();
+  const domainAtStart = domainName ?? "_pending";
+  writeMeta(runDir, {
+    runId,
+    domain: domainAtStart,
+    status: "running",
+    startedAt,
+  });
+
   // Step 1: 确定域
   if (!domainName) {
     domainName = await catalogRoute(userPrompt, runDir, options);
     log(`[catalog] 自动路由到域: ${domainName}`);
   }
+  writeMeta(runDir, { runId, domain: domainName, status: "running", startedAt });
 
+  try {
+    await runDomain(domainName, userPrompt, runId, runDir, options);
+  } catch (err) {
+    writeMeta(runDir, {
+      runId,
+      domain: domainName,
+      status: "failed",
+      startedAt,
+      endedAt: new Date().toISOString(),
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
+  writeMeta(runDir, {
+    runId,
+    domain: domainName,
+    status: "done",
+    startedAt,
+    endedAt: new Date().toISOString(),
+  });
+}
+
+/** 域内执行主体 */
+async function runDomain(
+  domainName: string,
+  userPrompt: string,
+  runId: string,
+  runDir: string,
+  options: OrchestrateOptions,
+): Promise<void> {
   const meta = DOMAIN_META[domainName];
   if (!meta) throw new Error(`Unknown domain: ${domainName}`);
   const config = DOMAIN_CONFIGS[domainName];
@@ -223,8 +263,14 @@ export async function orchestrate(
 
   // init / fix 走域内 executor
   const { runDomainSkill } = await import("./runtime/domain-skill.js");
-  const summary = await runDomainSkill(skill, userPrompt, domainName, ctx);
-  printAnswer(summary);
+  const outcome = await runDomainSkill(skill, userPrompt, domainName, ctx);
+
+  // Phase 3: Review —— 只读审查，与执行解耦
+  const { runReview, formatReview } = await import("./runtime/review.js");
+  const report = await runReview(skill, outcome.execution, domainName, ctx, {
+    llm: options.llm,
+  });
+  printAnswer(report ? formatReview(report) : outcome.summary);
 }
 
 /**
@@ -287,6 +333,26 @@ export async function executeQuerySkill(
     options.llm ? { llm: options.llm } : {},
   );
   return result.output;
+}
+
+/** 运行元信息 */
+export interface RunMeta {
+  runId: string;
+  domain: string;
+  status: "running" | "done" | "failed";
+  startedAt: string;
+  endedAt?: string;
+  error?: string;
+}
+
+/** 写运行元信息到 `<runDir>/meta.json` */
+export function writeMeta(runDir: string, meta: RunMeta): void {
+  try {
+    mkdirSync(runDir, { recursive: true });
+    writeFileSync(join(runDir, "meta.json"), JSON.stringify(meta, null, 2), "utf-8");
+  } catch (err) {
+    logError("[meta] 写入失败:", (err as Error).message);
+  }
 }
 
 /**

@@ -5,8 +5,8 @@
  * 这里统一控制并发度，避免打爆下游 MCP 服务。
  */
 
-/** 并发上限默认值 */
-export const DEFAULT_CONCURRENCY = 6;
+/** 并发上限默认值 —— 与原实现一致（32 页面并发时稳定） */
+export const DEFAULT_CONCURRENCY = 8;
 
 export interface ParallelOptions {
   /** 最大并发数，默认 6 */

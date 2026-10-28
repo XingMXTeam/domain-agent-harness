@@ -9,9 +9,13 @@
 
 ### 新增
 
+- **三阶段模型**
+  - Plan（模型出计划）→ Execute（代码并发执行）→ Review（模型只读审查）
+  - 32 页面场景：模型逐一执行 ~60-120 min，三阶段 ~5-7 min
 - **双执行引擎**
-  - `session`：命令式，单次 LLM 会话 + 域内 skill 路由
+  - `session`：命令式，Catalog 路由 + 域内 skill 路由 + 三阶段
   - `pipeline`：声明式，YAML 多 Agent 流水线 + JSON Schema 契约
+  - 两条路都保留：默认 session，只有「阶段超过三段且后段消费前段产物」才上 pipeline
 - **统一域路由 Catalog**
   - `src/prompts/catalog.md` 描述所有域，一次轻量 LLM 调用完成路由
   - 路由失败 / 返回非法值时兜底到只读域 `qa`
@@ -34,13 +38,15 @@
   - `parallel.ts` —— 带并发上限的并发执行器
   - `schema-resolver.ts` —— 零依赖的轻量 JSON Schema 校验
   - `keepalive.ts` / `reporter.ts` / `trace.ts` —— 心跳、进度上报、链路追踪
+  - `review.ts` —— Phase 3 只读审查，与执行路径解耦
+  - 运行产物落盘 `meta.json`（runId / domain / status / 起止时间）
 - **约束固化在代码里**
   - 模型不产出时间值，时间由 executor 从 `countryTimeRef` 推导
   - `template.version` 由模块池自动匹配
   - 缺失的 locale / theme 排期由 executor 自动注入
   - 工具白名单在提示词侧与代码侧双重约束
 - **工程**
-  - 60 个离线单元测试，覆盖路由、schema、流水线、并发器、build 域纯函数
+  - 72 个离线单元测试 + 11 项端到端冒烟检查（本地 mock LLM/MCP，真实 CLI 进程）
   - GitHub Actions CI：类型检查 / 测试 / 构建 / 产物校验 / 内网地址与密钥扫描
   - 完整中文文档：`docs/architecture.md`、`plan-json-schema.md`、`pipeline.md`、`configuration.md`、`domains.md`
 
