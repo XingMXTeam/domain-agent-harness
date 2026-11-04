@@ -12,6 +12,8 @@
     "dist",
     "src",
     "docs",
+    "knowledge",
+    "scripts/knowledge-mcp.mjs",
     "README.md",
     "LICENSE"
   ],
@@ -30,7 +32,8 @@
     "verify": "npm run typecheck && npm test && npm run build && node scripts/smoke-e2e.mjs",
     "demo": "npm run build && node scripts/local/demo.mjs",
     "local:mcp": "node scripts/local/mock-platform-mcp.mjs",
-    "local:llm": "node scripts/local/mock-llm.mjs"
+    "local:llm": "node scripts/local/mock-llm.mjs",
+    "kb:mcp": "node scripts/knowledge-mcp.mjs"
   },
   "keywords": [
     "agent",

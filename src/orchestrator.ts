@@ -13,6 +13,7 @@ import { getDomainDir, PROMPTS_DIR, RUNS_ROOT } from "./runtime/paths.js";
 import { invokeSession } from "./runtime/sdk-client.js";
 import type { LlmClient } from "./runtime/llm.js";
 import { executePipeline, extractJson } from "./runtime/pipeline-engine.js";
+import { loadPromptFile } from "./runtime/prompt-file.js";
 import { log, logError } from "./runtime/log.js";
 
 /** 编排器可选参数（测试时可注入 mock LLM） */
@@ -319,14 +320,15 @@ export async function executeQuerySkill(
   options: OrchestrateOptions = {},
 ): Promise<string> {
   const specPath = join(domainDir, "skills", "query", "spec.md");
-  const spec = readFileSync(specPath, "utf-8");
+  const spec = loadPromptFile(specPath);
 
   const result = await invokeSession(
     {
-      systemPrompt: spec,
+      systemPrompt: spec.body,
       userMessage: userPrompt,
       mcpConfigPath: ctx.mcpConfigPath,
-      allowedTools,
+      allowedTools: spec.allowedTools ?? allowedTools,
+      ...(spec.maxTurns ? { maxTurns: spec.maxTurns } : {}),
     },
     ctx,
     "query",

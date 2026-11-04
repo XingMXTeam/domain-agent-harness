@@ -11,6 +11,7 @@ import { invokeSession } from "./sdk-client.js";
 import { extractJson } from "./pipeline-engine.js";
 import { validate } from "./schema-resolver.js";
 import { log, logError, logWarn } from "./log.js";
+import { loadPromptFile } from "./prompt-file.js";
 
 export interface RunDomainSkillOptions {
   /** 注入自定义会话执行器（测试用） */
@@ -36,15 +37,15 @@ export async function runDomainSkill(
   const domainDir = getDomainDir(domainName);
   const specPath = join(domainDir, "skills", skill, "spec.md");
 
-  const spec = await import("node:fs").then((fs) =>
-    fs.readFileSync(specPath, "utf-8"),
-  );
+  const spec = loadPromptFile(specPath);
 
   const result = await invoke(
     {
-      systemPrompt: spec,
+      systemPrompt: spec.body,
       userMessage: userPrompt,
       mcpConfigPath: ctx.mcpConfigPath,
+      ...(spec.allowedTools ? { allowedTools: spec.allowedTools } : {}),
+      ...(spec.maxTurns ? { maxTurns: spec.maxTurns } : {}),
     },
     ctx,
     skill,
@@ -106,7 +107,28 @@ async function runInit(
   for (const item of failed) {
     lines.push(`- [${item.step}] ${item.target}: ${item.error ?? "失败"}`);
   }
+  const todos = manualTodosOf(plan);
+  if (todos.length) {
+    lines.push(`人工待办：${todos.length} 项`);
+    for (const t of todos) lines.push(`- ${t.pageName} / ${t.floorName}${t.reason ? `：${t.reason}` : ""}`);
+  }
   return { summary: lines.join("\n"), execution };
+}
+
+/** 计划里知识库标记为人工配置、不自动排期的楼层 */
+interface ManualTodo {
+  pageName: string;
+  floorName: string;
+  reason?: string;
+}
+
+export function manualTodosOf(plan: unknown): ManualTodo[] {
+  const list = (plan as { manualTodos?: unknown } | null)?.manualTodos;
+  if (!Array.isArray(list)) return [];
+  return list.filter(
+    (t): t is ManualTodo =>
+      !!t && typeof (t as ManualTodo).pageName === "string" && typeof (t as ManualTodo).floorName === "string",
+  );
 }
 
 /** fix：模型给出动作列表，逐条调用 */

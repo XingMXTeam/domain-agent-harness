@@ -61,11 +61,12 @@ export async function invokeSession(
     let lastText = "";
     let usage: SessionResult["usage"];
     let rounds = 0;
+    const maxRounds = req.maxTurns && req.maxTurns > 0 ? req.maxTurns : MAX_TOOL_ROUNDS;
 
     for (;;) {
       rounds += 1;
-      if (rounds > MAX_TOOL_ROUNDS) {
-        log(`[session:${label}] 工具轮数超过上限 ${MAX_TOOL_ROUNDS}，强制结束`);
+      if (rounds > maxRounds) {
+        log(`[session:${label}] 工具轮数超过上限 ${maxRounds}，强制结束`);
         break;
       }
 

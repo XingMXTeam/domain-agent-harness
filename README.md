@@ -53,6 +53,9 @@
   - 分层并发 + 并发上限（默认 8）；单点失败不扩散
 - **三阶段模型**
   - Plan（模型）→ Execute（代码并发）→ Review（模型只读审查）
+- **知识库驱动规划**
+  - 业务知识放在 Markdown 知识库（L0 总览 → L1 活动定义 → L2 页面知识），模型通过只读 MCP 按目录导航，楼层表字段直接决定计划
+  - 规划阶段用 `spec.md` frontmatter 限定只读工具白名单与最大轮数
 - **可审计**
   - 每次运行落盘 `trace.jsonl` 与会话记录，stderr 是日志、stdout 是结构化进度
 
@@ -76,12 +79,13 @@ FAIL_RATE=0.15 npm run demo            # 写接口随机失败，看 Review 怎�
 DEMO_REAL_LLM=1 npm run demo           # 模型走 .env 里的真 Provider，只把平台换成本地
 ```
 
-`scripts/local/` 里有两个本地服务：
+demo 会起三个本地服务：
 
-- `mock-platform-mcp.mjs` —— 假平台 MCP（Streamable HTTP，内存存储）：子场景 / 页面 / 模块 / 排期 / 点位 / 预发布，`GET /state` 看数据与最大并发
-- `mock-llm.mjs` —— 剧本模型（Anthropic Messages 兼容）：按阶段扮演路由器、规划师、审查员
+- `scripts/knowledge-mcp.mjs` —— 知识库 MCP：把 `knowledge/` 目录暴露成 `kb_list` / `kb_read` / `kb_search`，规划师按 L0 → L1 → L2 读完再出计划
+- `scripts/local/mock-platform-mcp.mjs` —— 假平台 MCP（Streamable HTTP，内存存储）：子场景 / 页面 / 模块 / 排期 / 点位 / 预发布，`GET /state` 看数据与最大并发
+- `scripts/local/mock-llm.mjs` —— 剧本模型（Anthropic Messages 兼容）：按阶段扮演路由器、规划师、审查员
 
-也可以分别启动（`npm run local:mcp`、`npm run local:llm`），再用 `PLATFORM_MCP_URL` / `ANTHROPIC_BASE_URL` 指过去。
+也可以分别启动（`npm run kb:mcp`、`npm run local:mcp`、`npm run local:llm`），再用 `KM_MCP_URL` / `PLATFORM_MCP_URL` / `ANTHROPIC_BASE_URL` 指过去。
 想用本地开源模型：`LLM_PROVIDER=openai`，`OPENAI_BASE_URL` 指向 Ollama / vLLM 的 OpenAI 兼容地址。
 
 ### 自动路由（Catalog）
@@ -117,6 +121,8 @@ bash entrypoint.sh "创建 618 大促"
 ## 目录结构
 
 ```
+knowledge/                       示例知识库（L0 / L1 / L2，见 docs/knowledge-base.md）
+scripts/knowledge-mcp.mjs        知识库 MCP 服务
 src/
 ├── index.ts                     CLI 入口
 ├── orchestrator.ts              编排器：Catalog 路由 + 引擎分派 + 域内 skill 路由
@@ -129,6 +135,7 @@ src/
 │   ├── llm.ts                   Provider 无关的 LLM 客户端
 │   ├── https-client.ts          POST + SSE 流式 POST
 │   ├── run-context.ts           运行上下文 / MCP 配置生成
+│   ├── prompt-file.ts           提示词 frontmatter（allowedTools / maxTurns）
 │   ├── pipeline-engine.ts       声明式流水线引擎
 │   ├── schema-resolver.ts       轻量 JSON Schema 校验
 │   ├── tool-runner.ts           代码侧工具执行器
@@ -272,6 +279,7 @@ npm run build       # 编译 + 复制域资产到 dist/
 | [`docs/architecture.md`](docs/architecture.md) | 三阶段模型、设计理念、性能对比、扩展点 |
 | [`docs/plan-json-schema.md`](docs/plan-json-schema.md) | plan.json 结构规范与 Executor 分层 |
 | [`docs/pipeline.md`](docs/pipeline.md) | YAML 流水线规范与 Schema 契约 |
+| [`docs/knowledge-base.md`](docs/knowledge-base.md) | 知识库结构、楼层表字段、知识库 MCP、规划阶段工具约束 |
 | [`docs/configuration.md`](docs/configuration.md) | 全部环境变量与 MCP 配置 |
 | [`docs/domains.md`](docs/domains.md) | 三个内置域的职责边界与工具清单 |
 

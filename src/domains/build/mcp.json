@@ -13,6 +13,13 @@
       "headers": {
         "PRIVATE-TOKEN": "{{LOCALE_MCP_TOKEN}}"
       }
+    },
+    "knowledge": {
+      "type": "http",
+      "url": "{{KM_MCP_URL:http://127.0.0.1:7803/mcp}}",
+      "headers": {
+        "PRIVATE-TOKEN": "{{KM_MCP_TOKEN}}"
+      }
     }
   }
 }
