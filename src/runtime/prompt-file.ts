@@ -27,6 +27,8 @@ export interface PromptFile {
   maxTurns?: number;
   /** 输出 JSON Schema 文件名（流水线步骤未写 schema 时使用） */
   outputSchema?: string;
+  /** fix 这类「模型出动作、代码执行」的 skill：代码允许执行的工具；缺省表示一个都不允许 */
+  allowedActions?: string[];
 }
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
@@ -48,6 +50,12 @@ export function parsePromptFile(text: string, source = "<inline>"): PromptFile {
       throw new Error(`提示词文件 ${source} 的 allowedTools 必须是字符串数组`);
     }
     out.allowedTools = meta.allowedTools as string[];
+  }
+  if (meta.allowedActions !== undefined) {
+    if (!Array.isArray(meta.allowedActions) || !meta.allowedActions.every((t) => typeof t === "string")) {
+      throw new Error(`提示词文件 ${source} 的 allowedActions 必须是字符串数组`);
+    }
+    out.allowedActions = meta.allowedActions as string[];
   }
   if (meta.maxTurns !== undefined) {
     const n = Number(meta.maxTurns);

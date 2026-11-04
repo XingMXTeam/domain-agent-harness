@@ -4,8 +4,9 @@
  * init：模型产出 plan.json → schema 校验 → Executor 分层执行
  * fix ：模型产出修复动作列表 → 逐条执行
  */
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ExecutionResult, RunContext } from "../types.js";
+import type { ExecutionItem, ExecutionResult, RunContext } from "../types.js";
 import { getDomainDir } from "./paths.js";
 import { invokeSession } from "./sdk-client.js";
 import { extractJson } from "./pipeline-engine.js";
@@ -51,13 +52,40 @@ export async function runDomainSkill(
     skill,
   );
 
-  const parsed = extractJson(result.output);
+  // init 的 JSON 解析失败不抛错，交给 schema 闸处理（回给模型修一次）
+  let parsed = skill === "init" ? tryExtractJson(result.output) : extractJson(result.output);
 
   if (skill === "init") {
+    // 计划必须过 schema：不合格就把错误回给模型修一次，仍不合格则不执行
+    let errors = checkPlan(parsed, domainName);
+    if (errors.length) {
+      logWarn(`[domain:${domainName}] plan.json 不符合 schema，回给模型修正一次:\n${errors.join("\n")}`);
+      const retry = await invoke(
+        {
+          systemPrompt: spec.body,
+          userMessage:
+            `${userPrompt}\n\n你上一次输出的 plan.json 不符合 schema：\n${errors.map((e) => `- ${e}`).join("\n")}\n` +
+            `请修正后只输出完整的 JSON。上一次的输出：\n${JSON.stringify(parsed ?? null)}`,
+          mcpConfigPath: ctx.mcpConfigPath,
+          ...(spec.allowedTools ? { allowedTools: spec.allowedTools } : {}),
+          ...(spec.maxTurns ? { maxTurns: spec.maxTurns } : {}),
+        },
+        ctx,
+        `${skill}-repair`,
+      );
+      parsed = tryExtractJson(retry.output);
+      errors = checkPlan(parsed, domainName);
+    }
+    if (errors.length) {
+      writePlan(ctx, parsed);
+      const summary = `计划不符合 schema，已拦截，未执行任何写操作：\n${errors.map((e) => `- ${e}`).join("\n")}`;
+      logError(`[domain:${domainName}] ${summary}`);
+      return { summary, execution: { success: false, items: [], summary }, plan: parsed, blocked: true };
+    }
     return await runInit(skill, parsed, domainName, ctx);
   }
   if (skill === "fix") {
-    return await runFix(skill, parsed, ctx);
+    return await runFix(skill, parsed, ctx, spec.allowedActions ?? []);
   }
 
   log(`[domain:${domainName}] skill ${skill} 已完成（未定义代码执行阶段）`);
@@ -74,6 +102,8 @@ export interface DomainSkillOutcome {
   plan?: unknown;
   /** DAH_PLAN_ONLY=1 时为 true：只产出了计划，未执行 */
   planOnly?: boolean;
+  /** 计划被代码拦截（schema 不合格），未执行 */
+  blocked?: boolean;
 }
 
 /** init：校验 plan.json 并交给域 executor 执行 */
@@ -83,26 +113,8 @@ async function runInit(
   domainName: string,
   ctx: RunContext,
 ): Promise<DomainSkillOutcome> {
-  const domainDir = getDomainDir(domainName);
-  const schemaPath = join(domainDir, "schemas", "plan.schema.json");
-
-  try {
-    const { readFileSync } = await import("node:fs");
-    const schema = JSON.parse(readFileSync(schemaPath, "utf-8")) as Record<string, unknown>;
-    const check = validate(plan, schema);
-    if (!check.valid) {
-      throw new Error(`plan.json 不符合 schema:\n${check.errors.join("\n")}`);
-    }
-  } catch (err) {
-    if (err instanceof SyntaxError) throw err;
-    const e = err as Error;
-    if (!e.message.includes("不符合 schema")) throw e;
-    logWarn(`[domain:${domainName}] ${e.message}`);
-  }
-
   // 计划始终落盘，便于复盘与评测
-  const { writeFileSync } = await import("node:fs");
-  writeFileSync(join(ctx.runDir, "plan.json"), JSON.stringify(plan ?? null, null, 2));
+  writePlan(ctx, plan);
 
   // 只规划不执行（评测 / 人工预览用）：不连平台写接口，不验收
   if (process.env.DAH_PLAN_ONLY === "1") {
@@ -129,6 +141,27 @@ async function runInit(
   return { summary: lines.join("\n"), execution, plan };
 }
 
+/** 按域的 plan.schema.json 校验计划，返回错误列表（空 = 合格） */
+export function checkPlan(plan: unknown, domainName: string): string[] {
+  if (plan === null || plan === undefined) return ["模型没有输出可解析的 JSON"];
+  const schemaPath = join(getDomainDir(domainName), "schemas", "plan.schema.json");
+  const schema = JSON.parse(readFileSync(schemaPath, "utf-8")) as Record<string, unknown>;
+  const check = validate(plan, schema);
+  return check.valid ? [] : check.errors;
+}
+
+function tryExtractJson(text: string): unknown {
+  try {
+    return extractJson(text);
+  } catch {
+    return null;
+  }
+}
+
+function writePlan(ctx: RunContext, plan: unknown): void {
+  writeFileSync(join(ctx.runDir, "plan.json"), JSON.stringify(plan ?? null, null, 2));
+}
+
 /** 计划里知识库标记为人工配置、不自动排期的楼层 */
 interface ManualTodo {
   pageName: string;
@@ -145,30 +178,48 @@ export function manualTodosOf(plan: unknown): ManualTodo[] {
   );
 }
 
-/** fix：模型给出动作列表，逐条调用 */
-async function runFix(
+/**
+ * fix：模型给出动作列表，代码逐条执行。
+ * 只执行 spec.md frontmatter `allowedActions` 里列出的工具；没列 = 一个都不执行（默认拒绝）。
+ */
+export async function runFix(
   skill: string,
   payload: unknown,
   ctx: RunContext,
+  allowedActions: string[],
+  runner?: Pick<import("./tool-runner.js").ToolRunner, "call" | "close">,
 ): Promise<DomainSkillOutcome> {
-  const { ToolRunner } = await import("./tool-runner.js");
   const actions = extractActions(payload);
-  const runner = await ToolRunner.open(ctx);
-  try {
-    for (const action of actions) {
-      log(`[fix] 执行 ${action.tool}`);
-      try {
-        await runner.call(action.tool, action.args);
-      } catch (err) {
-        logError(`[fix] ${action.tool} 失败: ${(err as Error).message}`);
+  const allowed = new Set(allowedActions);
+  const items: ExecutionItem[] = [];
+  const toRun = actions.filter((a) => {
+    if (allowed.has(a.tool)) return true;
+    logError(`[fix] 动作 ${a.tool} 不在 allowedActions 内，拒绝执行`);
+    items.push({ step: "fix", target: a.tool, ok: false, error: "不在 allowedActions 内，已拒绝" });
+    return false;
+  });
+  if (toRun.length) {
+    const { ToolRunner } = await import("./tool-runner.js");
+    const r = runner ?? (await ToolRunner.open(ctx));
+    try {
+      for (const action of toRun) {
+        log(`[fix] 执行 ${action.tool}`);
+        try {
+          await r.call(action.tool, action.args);
+          items.push({ step: "fix", target: action.tool, ok: true });
+        } catch (err) {
+          logError(`[fix] ${action.tool} 失败: ${(err as Error).message}`);
+          items.push({ step: "fix", target: action.tool, ok: false, error: (err as Error).message });
+        }
       }
+    } finally {
+      await r.close();
     }
-  } finally {
-    await runner.close();
   }
-  log(`[domain:fix] skill ${skill} 执行完成（${actions.length} 个动作）`);
-  const summary = `修复动作 ${actions.length} 个已执行`;
-  return { summary, execution: { success: true, items: actions, summary } };
+  const okCount = items.filter((i) => i.ok).length;
+  const summary = `修复动作 ${actions.length} 个：成功 ${okCount}，失败或拒绝 ${actions.length - okCount}`;
+  log(`[domain:fix] skill ${skill} ${summary}`);
+  return { summary, execution: { success: okCount === actions.length, items, summary } };
 }
 
 interface FixAction {
