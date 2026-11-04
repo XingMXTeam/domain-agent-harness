@@ -84,14 +84,17 @@ const NATIONS = [[/巴西|BR/, "BR"], [/墨西哥|MX/, "MX"], [/西班牙|ES/, "
 export function planFromKnowledge(prompt, dir, docs) {
   const campaign = docs[`${dir}/campaign.md`] ?? "";
   const notes = [];
-  const nation = NATIONS.find(([re]) => re.test(prompt))?.[1] ?? (notes.push("用户没给国家，暂按 BR"), "BR");
-  const tag = prompt.match(/(\d{2,4}|双\s*11|黑五)/)?.[1]?.replace(/\s/g, "") ?? "campaign";
+  // campaign.md：用户没说国家时不要默认，写进 notes 让人确认
+  const nation = NATIONS.find(([re]) => re.test(prompt))?.[1];
+  if (!nation) notes.push("用户没给国家，请确认覆盖国家后再执行（未设置 nations / countryTimeRef）");
+  // 活动标识取 618 / 双11 / 黑五 这类，跳过年份
+  const tag = prompt.replace(/20\d{2}\s*年?/g, "").match(/(\d{2,4}|双\s*11|黑五)/)?.[1]?.replace(/\s/g, "") ?? "campaign";
   const year = prompt.match(/20\d{2}/)?.[0] ?? "2026";
   const brand = prompt.match(/(\S+?)\s*品牌日/)?.[1]?.replace(/^(创建|搭建|新建)/, "") || "品牌";
   const label = prompt.match(/(\S+?大促)/)?.[1] ?? (dir === "brand-day" ? `${brand}品牌日` : "大促");
 
   const refFmt = campaign.match(/`(<国家码小写>-[^`]+)`/)?.[1] ?? "<国家码小写>-<活动标识>-<年份>";
-  const countryTimeRef = refFmt.replace("<国家码小写>", nation.toLowerCase()).replace("<活动标识>", tag).replace("<年份>", year);
+  const countryTimeRef = nation && refFmt.replace("<国家码小写>", nation.toLowerCase()).replace("<活动标识>", tag).replace("<年份>", year);
 
   const total = Number(prompt.match(/(\d+)\s*个?页面/)?.[1] ?? 0);
   const cats = (campaign.match(/类目按下列顺序取前 N 个：(.+)/)?.[1] ?? "").replace(/。$/, "").split("、").filter(Boolean);
@@ -109,17 +112,17 @@ export function planFromKnowledge(prompt, dir, docs) {
       const picked = floorsKb
         .filter((f) => f.required === "yes" || (cat && f.industries.split(",").includes(cat)))
         .sort((a, b) => Number(a.position) - Number(b.position));
-      pages.push({ name, nations: nation, knowledge: file, floors: picked.map((f) => ({ template: { name: f.component }, ...(f.hidden === "yes" ? { hidden: true } : {}) })) });
+      pages.push({ name, ...(nation ? { nations: nation } : {}), knowledge: file, floors: picked.map((f) => ({ template: { name: f.component }, ...(f.hidden === "yes" ? { hidden: true } : {}) })) });
       for (const f of picked) {
-        if (f.scheduling_type === "selection") schedules.push({ nations: [nation], pageName: name, floorName: f.component, contentData: { selectionPrompt: f.selection_prompt.replace("{类目}", cat).replace("{品牌}", brand) } });
-        else if (f.scheduling_type === "strategy") schedules.push({ nations: [nation], pageName: name, floorName: f.component, contentData: { strategy: "auto" } });
+        if (f.scheduling_type === "selection") schedules.push({ nations: nation ? [nation] : [], pageName: name, floorName: f.component, contentData: { selectionPrompt: f.selection_prompt.replace("{类目}", cat).replace("{品牌}", brand) } });
+        else if (f.scheduling_type === "strategy") schedules.push({ nations: nation ? [nation] : [], pageName: name, floorName: f.component, contentData: { strategy: "auto" } });
         else if (f.scheduling_type === "manual") manualTodos.push({ pageName: name, floorName: f.component, reason: `${f.name}需人工配置` });
       }
     }
   }
   const point = campaign.match(/建一个点位：`([^`]+)`/)?.[1];
   return {
-    setup: { childScene: { name: `${label}-${nation}`, nations: nation, countryTimeRef }, initModulePool: true },
+    setup: { childScene: { name: nation ? `${label}-${nation}` : label, ...(nation ? { nations: nation, countryTimeRef } : {}) }, initModulePool: true },
     pages, schedules,
     ...(manualTodos.length ? { manualTodos } : {}),
     ...(point ? { points: [{ name: point }] } : {}),

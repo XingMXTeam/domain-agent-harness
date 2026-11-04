@@ -72,6 +72,8 @@ export interface DomainSkillOutcome {
   execution: unknown;
   /** 模型产出的计划（init 才有），验收用它确定建了哪些页、每页对应哪篇页面知识 */
   plan?: unknown;
+  /** DAH_PLAN_ONLY=1 时为 true：只产出了计划，未执行 */
+  planOnly?: boolean;
 }
 
 /** init：校验 plan.json 并交给域 executor 执行 */
@@ -96,6 +98,16 @@ async function runInit(
     const e = err as Error;
     if (!e.message.includes("不符合 schema")) throw e;
     logWarn(`[domain:${domainName}] ${e.message}`);
+  }
+
+  // 计划始终落盘，便于复盘与评测
+  const { writeFileSync } = await import("node:fs");
+  writeFileSync(join(ctx.runDir, "plan.json"), JSON.stringify(plan ?? null, null, 2));
+
+  // 只规划不执行（评测 / 人工预览用）：不连平台写接口，不验收
+  if (process.env.DAH_PLAN_ONLY === "1") {
+    log(`[domain:${domainName}] DAH_PLAN_ONLY=1，只产出计划，不执行`);
+    return { summary: JSON.stringify(plan ?? null, null, 2), execution: { planOnly: true }, plan, planOnly: true };
   }
 
   const { executor } = await import("../domains/build/executor.js");

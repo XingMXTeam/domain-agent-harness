@@ -82,6 +82,7 @@ DEMO_REAL_LLM=1 npm run demo           # 模型走 .env 里的真 Provider，只
 demo 会起三个本地服务：
 
 - `scripts/knowledge-mcp.mjs` —— 知识库 MCP：把 `knowledge/` 目录暴露成 `kb_list` / `kb_read` / `kb_search`，规划师按 L0 → L1 → L2 读完再出计划
+- `npm run eval` —— 规划评测：10 条需求用例只跑规划，按知识库给计划打分；`EVAL_REAL_LLM=1` 评真模型（见 [`docs/evals.md`](docs/evals.md)）
 - `scripts/local/mock-platform-mcp.mjs` —— 假平台 MCP（Streamable HTTP，内存存储）：子场景 / 页面 / 模块 / 排期 / 点位 / 预发布，`GET /state` 看数据与最大并发
 - `scripts/local/mock-llm.mjs` —— 剧本模型（Anthropic Messages 兼容）：按阶段扮演路由器、规划师、审查员
 
@@ -250,6 +251,7 @@ steps:
 | `DAH_DOMAIN` | 强制指定域，等价于 `--domain=` |
 | `DAH_RUNS_ROOT` | 运行产物根目录，默认 `./.runs` |
 | `DAH_LOG_LEVEL` | `debug` / `info` / `warn` / `error` |
+| `DAH_PLAN_ONLY` | `1` 时 build init 只产出计划、不执行（评测与人工预览用） |
 | `USER_INPUT` | 沙箱模式下由外部注入的用户输入 |
 
 MCP 服务的 Token 一律通过 `{{ENV_VAR}}` 占位符注入，不硬编码在源码或配置文件里。

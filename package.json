@@ -15,7 +15,8 @@
     "knowledge",
     "scripts/knowledge-mcp.mjs",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "evals"
   ],
   "engines": {
     "node": ">=20.10.0"
@@ -33,7 +34,8 @@
     "demo": "npm run build && node scripts/local/demo.mjs",
     "local:mcp": "node scripts/local/mock-platform-mcp.mjs",
     "local:llm": "node scripts/local/mock-llm.mjs",
-    "kb:mcp": "node scripts/knowledge-mcp.mjs"
+    "kb:mcp": "node scripts/knowledge-mcp.mjs",
+    "eval": "npm run build && node scripts/eval-plans.mjs"
   },
   "keywords": [
     "agent",
