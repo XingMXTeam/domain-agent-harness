@@ -50,7 +50,7 @@
   - Streamable HTTP 传输（`stdio` 配置项已预留，客户端尚未实现）；工具名统一 `mcp__<server>__<tool>`
   - 失败自动重试 + 会话重建
 - **并发执行**
-  - build 执行器分层并发，单点失败不扩散（分层内暂未限流）；pipeline 的 foreach 用 `parallel` 控制并发上限
+  - build 执行器分层并发，所有平台调用共用全局并发上限（`DAH_CONCURRENCY`）；瞬时错误自动重试，建页重试前先核查避免重复；页面失败只跳过它自己的模块与排期；pipeline 的 foreach 用 `parallel` 控制并发上限
 - **三阶段模型**
   - Plan（模型）→ Execute（代码并发）→ Review（模型只读审查）
 - **知识库驱动规划**
@@ -250,6 +250,9 @@ steps:
 | `DAH_DOMAIN` | 强制指定域，等价于 `--domain=` |
 | `DAH_RUNS_ROOT` | 运行产物根目录，默认 `./.runs` |
 | `DAH_LOG_LEVEL` | `debug` / `info` / `warn` / `error` |
+| `DAH_CONCURRENCY` | build 执行器打到平台的全局并发上限，默认 `8` |
+| `DAH_RETRY_MAX` | 平台瞬时错误最多重试次数，默认 `3` |
+| `DAH_RETRY_BASE_MS` | 重试退避基数（毫秒，指数退避 + 抖动），默认 `500` |
 | `USER_INPUT` | 沙箱模式下由外部注入的用户输入 |
 
 MCP 服务的 Token 一律通过 `{{ENV_VAR}}` 占位符注入，不硬编码在源码或配置文件里。

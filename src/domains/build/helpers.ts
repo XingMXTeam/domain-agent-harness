@@ -3,27 +3,113 @@
  */
 import type { McpCallResult, McpClientPool } from "../../runtime/mcp-client.js";
 import { log, logWarn } from "../../runtime/log.js";
+import { DEFAULT_CONCURRENCY, Semaphore } from "../../runtime/parallel.js";
 import type { Plan, PlanSchedule, ResolvedPlan } from "./types.js";
 
 /** 平台 MCP 服务名 */
 export const PLATFORM_SERVER = "platform";
 
+/** 打到平台的全局并发上限（`DAH_CONCURRENCY`，默认 8） */
+export function platformConcurrency(): number {
+  const raw = Number(process.env.DAH_CONCURRENCY);
+  return Number.isInteger(raw) && raw > 0 ? raw : DEFAULT_CONCURRENCY;
+}
+
+/** 瞬时错误最多重试次数（`DAH_RETRY_MAX`，默认 3） */
+function retryMax(): number {
+  const raw = Number(process.env.DAH_RETRY_MAX);
+  return Number.isInteger(raw) && raw >= 0 ? raw : 3;
+}
+
+/** 重试退避基数毫秒（`DAH_RETRY_BASE_MS`，默认 500；指数退避 + 抖动） */
+function retryBaseMs(): number {
+  const raw = Number(process.env.DAH_RETRY_BASE_MS);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 500;
+}
+
+/**
+ * 判断是否为瞬时错误 —— 只有这类错误才值得重试。
+ *
+ * 参数错误、权限错误、业务校验失败（如「模板不存在」）重试也不会好，直接失败。
+ * HTTP 层的 5xx / 网络错误已由 McpHttpClient 重试过；这里处理的是
+ * 平台以工具结果（isError）形式返回的瞬时错误。
+ */
+export function isTransientError(error: string | undefined): boolean {
+  if (!error) return false;
+  return /\b(429|500|502|503|504)\b|timeout|timed out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|rate.?limit|too many requests|temporarily|unavailable|瞬时|限流|超时|繁忙|稍后重试/i.test(
+    error,
+  );
+}
+
+/** 单次调用的重试策略 */
+export interface CallOptions {
+  /** 日志标签 */
+  label?: string;
+  /**
+   * 重试前的「是否已经写成功」核查。
+   *
+   * 写接口报瞬时错误时，请求可能已经在平台落地（响应丢了）。盲目重试会重复创建。
+   * 提供 recover 时，每次重试前先调用它：返回结果即视为已成功，不再重写。
+   */
+  recover?: () => Promise<McpCallResult | undefined>;
+}
+
+const limiters = new WeakMap<McpClientPool, Semaphore>();
+
+function limiterFor(pool: McpClientPool): Semaphore {
+  let limiter = limiters.get(pool);
+  if (!limiter) {
+    limiter = new Semaphore(platformConcurrency());
+    limiters.set(pool, limiter);
+  }
+  return limiter;
+}
+
 /**
  * 调用搭建平台的 MCP 工具。
+ *
+ * - **全局限流**：同一个 pool 上所有平台调用共用一个信号量，任何时刻不超过 `DAH_CONCURRENCY`。
+ * - **瞬时错误重试**：仅对 isTransientError 判定的错误重试，指数退避；重试期间不占并发名额。
+ * - **写前核查**：带 recover 的写接口，重试前先核查是否已落地，避免重复创建。
  *
  * @param pool 客户端池
  * @param tool 工具名（不带 `mcp__<server>__` 前缀）
  * @param args 参数
- * @param label 日志标签
+ * @param options 日志标签（兼容旧签名直接传字符串）或重试策略
  */
 export async function gcpCall(
   pool: McpClientPool,
   tool: string,
   args: Record<string, unknown> = {},
-  label?: string,
+  options?: string | CallOptions,
 ): Promise<McpCallResult> {
-  if (label) log(`[exec] ${label}`);
-  return pool.callTool(PLATFORM_SERVER, tool, args);
+  const opts: CallOptions = typeof options === "string" ? { label: options } : (options ?? {});
+  if (opts.label) log(`[exec] ${opts.label}`);
+  const limiter = limiterFor(pool);
+  const max = retryMax();
+
+  let result: McpCallResult = { success: false, error: "未调用" };
+  for (let attempt = 0; attempt <= max; attempt++) {
+    if (attempt > 0 && opts.recover) {
+      const recovered = await limiter.run(() => opts.recover!()).catch(() => undefined);
+      if (recovered?.success) {
+        logWarn(`[exec] ${tool} 上次报错但平台已落地，按成功处理（不重写）`);
+        return recovered;
+      }
+    }
+    result = await limiter.run(() => pool.callTool(PLATFORM_SERVER, tool, args));
+    if (result.success || !isTransientError(result.error) || attempt === max) break;
+    const delay = retryBaseMs() * 2 ** attempt * (0.5 + Math.random());
+    logWarn(
+      `[exec] ${tool} 瞬时错误，${Math.round(delay)}ms 后重试 (${attempt + 1}/${max}): ${result.error}`,
+    );
+    await sleep(delay);
+  }
+  return result;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**

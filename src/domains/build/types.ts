@@ -151,6 +151,8 @@ export interface ModuleResult {
   floorId?: number;
   componentId?: number;
   ok: boolean;
+  /** 因上游（页面）失败而未执行 */
+  skipped?: boolean;
   error?: string;
 }
 
@@ -158,5 +160,8 @@ export interface ModuleResult {
 export interface ScheduleStats {
   total: number;
   success: number;
+  /** 写入失败 + 因楼层缺失跳过的总数 */
   failed: number;
+  /** 楼层（模块）没挂上而跳过的排期数，已计入 failed */
+  skipped?: number;
 }
