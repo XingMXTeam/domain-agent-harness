@@ -19,6 +19,12 @@
 }
 ```
 
+如果 JSON 里带有 `acceptance`，那是代码按验收规则（`knowledge/shared/review-rules.md`）只读核对平台得出的结果，每条是 `rule / target / expected / actual / pass`：
+
+- `pass` 已由代码判定，**你不能改判**。验收没通过，整体就不通过。
+- 对每条 `pass: false`，给出原因判断和具体的下一步动作，放进 `issues`（`step` 写规则编号，如 `R2`）。
+- `acceptance.ran = false` 表示没做验收，在 `summary` 里写明「未验收」及原因。
+
 ## 审查四件事
 
 1. **完整性** —— 页面数、模块数、排期数与 summary 是否自洽？有没有该做没做的步骤？

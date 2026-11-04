@@ -44,6 +44,7 @@
         "properties": {
           "name": { "type": "string", "minLength": 1 },
           "nations": { "type": "string" },
+          "knowledge": { "type": "string", "description": "该页对应的页面知识文件（知识库相对路径），验收按它对照楼层表" },
           "floors": {
             "type": "array",
             "items": {

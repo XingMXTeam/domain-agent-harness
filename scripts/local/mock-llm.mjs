@@ -109,7 +109,7 @@ export function planFromKnowledge(prompt, dir, docs) {
       const picked = floorsKb
         .filter((f) => f.required === "yes" || (cat && f.industries.split(",").includes(cat)))
         .sort((a, b) => Number(a.position) - Number(b.position));
-      pages.push({ name, nations: nation, floors: picked.map((f) => ({ template: { name: f.component }, ...(f.hidden === "yes" ? { hidden: true } : {}) })) });
+      pages.push({ name, nations: nation, knowledge: file, floors: picked.map((f) => ({ template: { name: f.component }, ...(f.hidden === "yes" ? { hidden: true } : {}) })) });
       for (const f of picked) {
         if (f.scheduling_type === "selection") schedules.push({ nations: [nation], pageName: name, floorName: f.component, contentData: { selectionPrompt: f.selection_prompt.replace("{类目}", cat).replace("{品牌}", brand) } });
         else if (f.scheduling_type === "strategy") schedules.push({ nations: [nation], pageName: name, floorName: f.component, contentData: { strategy: "auto" } });
@@ -151,7 +151,12 @@ function reviewFrom(userText) {
   const issues = items.filter((i) => !i.ok).map((i) => ({ level: "error", step: i.step, target: i.target, message: i.error ?? "失败", suggestion: /瞬时|503|timeout/i.test(i.error ?? "") ? "可重试" : "检查计划或平台配置" }));
   const sched = items.find((i) => i.step === "schedules");
   if (sched && /^0\//.test(sched.target)) issues.push({ level: "warning", step: "schedules", target: sched.target, message: "没有写入任何排期", suggestion: "核对 plan 中排期的位置是否与 executor 读取的结构一致" });
-  return { ok: issues.every((i) => i.level !== "error"), checked: items.length, issues, summary: `检查 ${items.length} 项，${issues.length} 个问题。${exec.summary ?? ""}` };
+  const acc = exec.acceptance;
+  for (const r of acc?.results ?? []) {
+    if (!r.pass) issues.push({ level: "error", step: r.rule, target: r.target, message: `期望 ${r.expected}，实际 ${r.actual}`, suggestion: r.rule === "R2" ? "核对排期写入是否带上页面和楼层" : "按验收规则补齐后重新验收" });
+  }
+  const accNote = acc ? (acc.ran ? `验收 ${acc.results.filter((r) => r.pass).length}/${acc.results.length}。` : "未验收。") : "";
+  return { ok: issues.every((i) => i.level !== "error"), checked: items.length, issues, summary: `检查 ${items.length} 项，${issues.length} 个问题。${accNote}${exec.summary ?? ""}` };
 }
 
 export function respond(payload) {

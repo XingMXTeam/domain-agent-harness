@@ -49,6 +49,8 @@ export function createPlatform() {
       }),
     },
     modulePool_getModulesWithTemplate: { desc: "模板库：组件及可用版本", run: () => TEMPLATES },
+    page_getList: { desc: "按子场景列出页面", run: ({ childSceneId } = {}) => db.pages.filter((p) => childSceneId === undefined || p.childSceneId === childSceneId) },
+    schedule_getList: { desc: "按页面 + 楼层列出排期（只读）", run: ({ pageName, floorName } = {}) => db.schedules.filter((s) => s.pageName === pageName && s.floorName === floorName) },
     page_listModules: { desc: "列出页面的模块", run: ({ pageId }) => db.modules.filter((m) => m.pageId === pageId) },
     schedule_getContent: { desc: "取排期内容", run: ({ scheduleId }) => db.schedules.find((s) => s.id === scheduleId) ?? null },
 
