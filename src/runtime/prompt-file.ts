@@ -7,6 +7,7 @@
  *   - mcp__knowledge__kb_list
  *   - mcp__knowledge__kb_read
  * maxTurns: 12
+ * outputSchema: plan.schema.json
  * ---
  * # 正文即 system prompt
  * ```
@@ -24,6 +25,8 @@ export interface PromptFile {
   allowedTools?: string[];
   /** 最大工具轮数 */
   maxTurns?: number;
+  /** 输出 JSON Schema 文件名（流水线步骤未写 schema 时使用） */
+  outputSchema?: string;
 }
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
@@ -52,6 +55,12 @@ export function parsePromptFile(text: string, source = "<inline>"): PromptFile {
       throw new Error(`提示词文件 ${source} 的 maxTurns 必须是正整数`);
     }
     out.maxTurns = n;
+  }
+  if (meta.outputSchema !== undefined) {
+    if (typeof meta.outputSchema !== "string" || !meta.outputSchema) {
+      throw new Error(`提示词文件 ${source} 的 outputSchema 必须是非空字符串`);
+    }
+    out.outputSchema = meta.outputSchema;
   }
   return out;
 }

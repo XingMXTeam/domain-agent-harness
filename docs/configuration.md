@@ -92,10 +92,10 @@
 
 运行时会被复制到 `<runDir>/mcp-config.json`（占位符已替换）。
 
-支持两种传输：
+传输：
 
-- `http` —— Streamable HTTP（`url` + `headers`）
-- `stdio` —— 本地进程（`command` + `args` + `env`）
+- `http` —— Streamable HTTP（`url` + `headers`），已实现
+- `stdio` —— 本地进程（`command` + `args` + `env`），配置结构已预留，客户端**尚未实现**；本地服务请用 HTTP 方式起（参考 `scripts/knowledge-mcp.mjs`）
 
 工具名统一为 `mcp__<server>__<tool>`，例如：
 

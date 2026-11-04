@@ -1,38 +1,32 @@
-# 主流水线 —— plan → style → floors → review
+# 主流水线 —— plan → 每个楼层跑一遍子流水线（并发 4） → review
 name: deployment
-description: 投放主流程：规划 → 建样式包 → 建排期 → 发布 → 校验
+description: 投放主流程：规划 → 按楼层并发投放（样式包 → 排期 → 发布） → 只读校验
 
 steps:
-  - name: plan
-    agent: agents/deployment-planner.md
-    schema: schemas/deployment-plan.schema.json
+  - id: plan
+    agent: agents/deployment-planner.md       # outputSchema 写在 Agent frontmatter 里
+    input: ${user_prompt}
     output: deployment_plan
+    retries: 1                                # 只读步骤，输出不合规可以放心重试
     description: 只读知识库，产出投放计划
 
-  - name: style
-    agent: agents/style-builder.md
-    input: deployment_plan
-    schema: schemas/style-results.schema.json
-    output: style_results
-    description: 为每个楼层创建样式包
+  - id: floors
+    foreach: ${deployment_plan.floors}
+    parallel: 4
+    pipeline: pipelines/floor-deployment.pipeline.yaml
+    input:
+      floor: ${item}
+      activity: ${deployment_plan.activity}
+      nations: ${deployment_plan.nations}
+    output: floor_results
+    description: 每个楼层独立跑一遍「样式包 → 排期 → 发布」，一个楼层一个子作用域
 
-  - name: schedule
-    agent: agents/schedule-builder.md
-    input: style_results
-    schema: schemas/schedule-result.schema.json
-    output: schedule_results
-    description: 为楼层配置排期
-
-  - name: publish
-    agent: agents/floor-publisher.md
-    input: schedule_results
-    schema: schemas/publish-result.schema.json
-    output: publish_results
-    description: 发布楼层
-
-  - name: review
+  - id: review
     agent: agents/deployment-reviewer.md
-    input: publish_results
-    schema: schemas/deployment-report.schema.json
+    when: ${floor_results}
+    input:
+      plan: ${deployment_plan}
+      floors: ${floor_results}
     output: deployment_report
+    retries: 1
     description: 只读校验投放结果
