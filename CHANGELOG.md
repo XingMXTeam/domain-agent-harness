@@ -16,7 +16,12 @@
 - `plan.json` 新增 `pages[].knowledge`：该页对应的页面知识文件，规划师必填
 - 本地假平台新增只读工具 `page_getList`、`schedule_getList`
 
+- **规划评测**（`npm run eval`，详见 `docs/evals.md`）：10 条需求用例，只跑规划阶段给 `plan.json` 打 14 类检查；楼层、隐藏、排期期望现读知识库，改知识库不用改用例。`EVAL_REAL_LLM=1` 评真模型，`EVAL_MIN_SCORE` 接 CI
+- `DAH_PLAN_ONLY=1`：只产出计划不执行；init 的 `plan.json` 现在始终写入运行目录
+
 ### 修复
+
+- 剧本规划师：用户没给国家时默认成 BR（应写 notes 让人确认）；需求带年份时把年份当活动标识。均由规划评测首次运行发现
 
 - 写排期时没有带页面和楼层（`schedule_update` 载荷缺 `pageName` / `floorName`），排期无法关联到楼层。执行器报「排期 5/5」，但平台上按楼层查不到任何排期；验收的 R2 首次跑就暴露了这个问题
 

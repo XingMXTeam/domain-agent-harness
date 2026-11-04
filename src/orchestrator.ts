@@ -265,6 +265,10 @@ async function runDomain(
   // init / fix 走域内 executor
   const { runDomainSkill } = await import("./runtime/domain-skill.js");
   const outcome = await runDomainSkill(skill, userPrompt, domainName, ctx);
+  if (outcome.planOnly) {
+    printAnswer(outcome.summary);
+    return;
+  }
 
   // Phase 3a: 验收 —— 代码按 review-rules 只读核对平台状态，pass / fail 由代码判定
   const acceptance = skill === "init" ? await runBuildAcceptance(outcome, ctx) : undefined;

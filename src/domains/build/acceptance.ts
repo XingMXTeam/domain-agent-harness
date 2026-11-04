@@ -74,6 +74,10 @@ export interface KbFloor {
   required: boolean;
   scheduling_type: string;
   hidden: boolean;
+  /** 可选楼层命中的类目；空数组表示不按类目加 */
+  industries: string[];
+  /** selection 楼层的选品提示，可含 `{类目}` / `{品牌}` 占位 */
+  selection_prompt: string;
 }
 
 interface PlanPage {
@@ -143,6 +147,8 @@ export function parseFloorTable(markdown: string): KbFloor[] {
       required: row.required === "yes",
       scheduling_type: row.scheduling_type ?? "none",
       hidden: row.hidden === "yes",
+      industries: (row.industries ?? "").split(/[,，]/).map((x) => x.trim()).filter(Boolean),
+      selection_prompt: row.selection_prompt ?? "",
     });
   }
   return floors;
