@@ -2,8 +2,8 @@
  * build 域通用工具 —— MCP 调用封装、时间格式化、plan 预处理。
  */
 import type { McpCallResult, McpClientPool } from "../../runtime/mcp-client.js";
-import { log } from "../../runtime/log.js";
-import type { Plan, ResolvedPlan } from "./types.js";
+import { log, logWarn } from "../../runtime/log.js";
+import type { Plan, PlanSchedule, ResolvedPlan } from "./types.js";
 
 /** 平台 MCP 服务名 */
 export const PLATFORM_SERVER = "platform";
@@ -52,9 +52,13 @@ export function msToPDTString(ms: number | undefined | null): string {
 }
 
 /**
- * plan 预处理 —— 补齐缺省字段、归一化结构。
+ * plan 预处理 —— 补齐缺省字段、把 spec.md 约定的「模型视角」结构归一成 executor 读取的结构。
  *
- * 这里只做**结构性**归一化；所有时间值由 resolve-time 依据 countryTimeRef 注入。
+ * 只做**结构性**归一化，不产生任何业务值；时间仍由 resolve-time 依据 countryTimeRef 注入。
+ *
+ *   - `floors[].name` 缺省时取 `template.name`（模型只写模板名）
+ *   - `setup.childScene.countryTimeRef` 是字符串引用 → 挪到 `extendInfo.renderConfig.countryTimeRef`
+ *   - 顶层 `schedules[]` 按 `pageName` + `floorName` 挂到对应楼层的 `floors[].schedules`
  */
 export function preprocessPlan(plan: Plan): ResolvedPlan {
   const resolved: ResolvedPlan = {
@@ -63,15 +67,34 @@ export function preprocessPlan(plan: Plan): ResolvedPlan {
       ...page,
       floors: (page.floors ?? []).map((floor) => ({
         ...floor,
-        schedules: floor.schedules ?? [],
+        name: floor.name ?? floor.template?.name ?? "",
+        schedules: [...(floor.schedules ?? [])],
       })),
     })),
   };
 
-  // 子场景上的 renderConfig 若缺省则补一个
   const childScene = resolved.setup?.childScene;
-  if (childScene && !childScene.extendInfo) {
-    childScene.extendInfo = {};
+  if (childScene) {
+    childScene.extendInfo ??= {};
+    const ref = childScene.countryTimeRef as unknown;
+    if (ref && !childScene.extendInfo.renderConfig?.countryTimeRef) {
+      childScene.extendInfo.renderConfig ??= {};
+      childScene.extendInfo.renderConfig.countryTimeRef =
+        typeof ref === "string" ? { name: ref } : (ref as { id?: string; name?: string });
+    }
+  }
+
+  const topLevel = (plan as { schedules?: unknown }).schedules;
+  if (Array.isArray(topLevel)) {
+    for (const raw of topLevel as PlanSchedule[]) {
+      const page = resolved.pages.find((p) => p.name === raw.pageName);
+      const floor = page?.floors.find((f) => f.name === raw.floorName);
+      if (!floor) {
+        logWarn(`[plan] 排期找不到楼层: ${raw.pageName ?? "?"}/${raw.floorName ?? "?"}，已跳过`);
+        continue;
+      }
+      floor.schedules!.push({ ...raw, name: raw.name ?? raw.floorName ?? floor.name });
+    }
   }
 
   return resolved;

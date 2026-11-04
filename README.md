@@ -67,6 +67,23 @@ npm install
 cp .env.example .env      # 填入 LLM_PROVIDER 与对应的 API Key
 ```
 
+### 本地一键演示（无需 Key、无需外部服务）
+
+```bash
+npm run demo
+npm run demo -- "创建 618 大促，巴西站，32 个页面"
+FAIL_RATE=0.15 npm run demo            # 写接口随机失败，看 Review 怎么标注
+DEMO_REAL_LLM=1 npm run demo           # 模型走 .env 里的真 Provider，只把平台换成本地
+```
+
+`scripts/local/` 里有两个本地服务：
+
+- `mock-platform-mcp.mjs` —— 假平台 MCP（Streamable HTTP，内存存储）：子场景 / 页面 / 模块 / 排期 / 点位 / 预发布，`GET /state` 看数据与最大并发
+- `mock-llm.mjs` —— 剧本模型（Anthropic Messages 兼容）：按阶段扮演路由器、规划师、审查员
+
+也可以分别启动（`npm run local:mcp`、`npm run local:llm`），再用 `PLATFORM_MCP_URL` / `ANTHROPIC_BASE_URL` 指过去。
+想用本地开源模型：`LLM_PROVIDER=openai`，`OPENAI_BASE_URL` 指向 Ollama / vLLM 的 OpenAI 兼容地址。
+
 ### 自动路由（Catalog）
 
 ```bash

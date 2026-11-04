@@ -27,7 +27,10 @@
     "harness": "tsx src/index.ts",
     "prepublishOnly": "npm run build",
     "smoke": "npm run build && node scripts/smoke-e2e.mjs",
-    "verify": "npm run typecheck && npm test && npm run build && node scripts/smoke-e2e.mjs"
+    "verify": "npm run typecheck && npm test && npm run build && node scripts/smoke-e2e.mjs",
+    "demo": "npm run build && node scripts/local/demo.mjs",
+    "local:mcp": "node scripts/local/mock-platform-mcp.mjs",
+    "local:llm": "node scripts/local/mock-llm.mjs"
   },
   "keywords": [
     "agent",
