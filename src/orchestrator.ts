@@ -62,7 +62,7 @@ export const QUERY_ALLOWED_TOOLS: string[] = [
   "mcp__platform__module_listResourcesAndSchedules",
   "mcp__platform__schedule_getContent",
   "mcp__platform__schedule_getPoolInfo",
-  "mcp__platform__schedule_createOrGetList",
+  "mcp__platform__schedule_getList", // 不用 schedule_createOrGetList：名字带 create，不能保证只读
   "mcp__platform__modulePool_getModulesWithTemplate",
   "mcp__platform__modulePool_searchModuleVersions",
   "mcp__platform__freeze_getByChildSceneId",
@@ -265,13 +265,17 @@ async function runDomain(
   // init / fix 走域内 executor
   const { runDomainSkill } = await import("./runtime/domain-skill.js");
   const outcome = await runDomainSkill(skill, userPrompt, domainName, ctx);
+  if (outcome.blocked) {
+    printAnswer(outcome.summary);
+    return;
+  }
   if (outcome.planOnly) {
     printAnswer(outcome.summary);
     return;
   }
 
   // Phase 3a: 验收 —— 代码按 review-rules 只读核对平台状态，pass / fail 由代码判定
-  const acceptance = skill === "init" ? await runBuildAcceptance(outcome, ctx) : undefined;
+  const acceptance = skill === "init" ? await runBuildAcceptance(outcome, ctx, userPrompt) : undefined;
 
   // Phase 3b: Review —— 模型只读审查，解释原因、给建议；不能推翻验收结论
   const { runReview, formatReview } = await import("./runtime/review.js");
@@ -288,7 +292,8 @@ async function runDomain(
     sections.push(formatAcceptance(acceptance));
   }
   if (review) {
-    const blocked = acceptance?.ran === true && !acceptance.ok;
+    // 验收没跑成（ran=false）同样视为未通过，不能让模型审查放行
+    const blocked = acceptance !== undefined && (!acceptance.ran || !acceptance.ok);
     sections.push(formatReview(blocked ? { ...review, ok: false } : review));
   } else {
     sections.push(outcome.summary);
@@ -300,12 +305,13 @@ async function runDomain(
 async function runBuildAcceptance(
   outcome: { execution: unknown; plan?: unknown },
   ctx: RunContext,
+  request: string,
 ) {
   const { runAcceptance, mcpAcceptanceSource } = await import("./domains/build/acceptance.js");
   const { createMcpClientPool } = await import("./runtime/mcp-client.js");
   const pool = await createMcpClientPool(ctx.mcpConfigPath);
   try {
-    return await runAcceptance(outcome.plan, outcome.execution as never, mcpAcceptanceSource(pool));
+    return await runAcceptance(outcome.plan, outcome.execution as never, mcpAcceptanceSource(pool), { request });
   } finally {
     await pool.close();
   }

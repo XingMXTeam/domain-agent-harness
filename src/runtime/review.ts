@@ -6,7 +6,8 @@
  *
  * Review 与执行解耦：它只看结果，不复用执行路径，因此不会因为执行失败而失效。
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { loadPromptFile } from "./prompt-file.js";
 import { join } from "node:path";
 import type { RunContext } from "../types.js";
 import { getDomainDir } from "./paths.js";
@@ -57,7 +58,7 @@ export async function runReview(
     return undefined;
   }
 
-  const systemPrompt = readFileSync(reviewPath, "utf-8");
+  const spec = loadPromptFile(reviewPath);
   const payload =
     typeof executionResult === "string"
       ? executionResult
@@ -65,7 +66,10 @@ export async function runReview(
 
   const result = await invokeSession(
     {
-      systemPrompt,
+      systemPrompt: spec.body,
+      // 审查员默认一个工具都没有；要读平台须在 review.md frontmatter 里显式列只读工具
+      allowedTools: spec.allowedTools ?? [],
+      ...(spec.maxTurns ? { maxTurns: spec.maxTurns } : {}),
       userMessage: `以下是执行阶段的结果，请审查：\n\n${payload}`,
       mcpConfigPath: ctx.mcpConfigPath,
     },
@@ -76,7 +80,8 @@ export async function runReview(
 
   const parsed = extractJson(result.output) as Partial<ReviewReport>;
   return {
-    ok: parsed.ok ?? true,
+    // 模型没明确给出 ok: true 就当未通过
+    ok: parsed.ok === true,
     checked: parsed.checked ?? 0,
     issues: Array.isArray(parsed.issues) ? parsed.issues : [],
     summary: parsed.summary ?? result.output,

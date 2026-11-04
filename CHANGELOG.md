@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+### 安全（模型不碰写接口、代码说了算）
+
+- **计划 schema 闸**：init 的 `plan.json` 不过 schema（或不是 JSON）时，把错误回给模型修正一次；仍不合格则拦截，不执行任何写操作。此前只告警、照常执行
+- **fix 动作白名单**：`skills/fix/spec.md` 新增 frontmatter `allowedActions`，代码只执行列表内的工具，列表外的动作拒绝并计入失败；未配置时一个都不执行。fix 的定位会话也加了只读 `allowedTools`（此前模型在定位阶段能看到全部写工具）
+- **审查员只读**：`review.md` 通过 frontmatter 声明只读工具；未声明时不给任何工具（此前审查员拿到全部工具，只读只靠提示词）。模型未明确给出 `ok: true` 时按未通过（此前缺省为通过）
+- `allowedTools: []` 现在表示「不给任何工具」，只有不传才不限制
+- **验收跳过即不通过**：计划未标注页面知识导致验收没跑时，整体判为不通过
+- **R0 页面清单**：期望来自活动定义 `campaign.md` 而不是计划。固定数量的页面类型按命名模板计数；需求给出「N 个页面」时核对总页数；每页对照的页面知识必须在活动定义里。计划漏建的页面现在会被抓到
+- query 只读白名单把 `schedule_createOrGetList`（名字带 create）换成 `schedule_getList`
+
 ### 新增
 
 - **build 域验收（代码判定）**：init 执行后、模型审查前，按 `knowledge/shared/review-rules.md` 的 R1–R5 只读核对平台真实状态（`src/domains/build/acceptance.ts`）

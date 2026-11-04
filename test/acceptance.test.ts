@@ -7,7 +7,9 @@ import {
   READ_TOOLS,
   formatAcceptance,
   mcpAcceptanceSource,
+  parseCampaignPages,
   parseFloorTable,
+  requestedPageCount,
   readPlatform,
   runAcceptance,
   type AcceptanceSource,
@@ -130,7 +132,7 @@ describe("runAcceptance", () => {
   it("计划里的页面平台上不存在", async () => {
     const s = goodPlatform();
     s.pages = [];
-    assert.deepEqual(failed(await runAcceptance(plan, execution, fakeSource(s))), ["R1 首页", "R5 首页"]);
+    assert.deepEqual(failed(await runAcceptance(plan, execution, fakeSource(s))), ["R0 首页", "R1 首页", "R5 首页"]);
   });
 
   it("子场景没建成时记 R0 失败，不调平台", async () => {
@@ -154,7 +156,41 @@ describe("runAcceptance", () => {
     const twoPages = { pages: [...plan.pages, { name: "首页2", knowledge: "mega-sale/pages/home.md" }] };
     const report = await runAcceptance(twoPages, execution, fakeSource(s, calls));
     assert.equal(report.ok, true);
-    assert.deepEqual(calls, ["kb:mega-sale/pages/home.md"]);
+    assert.deepEqual(calls, ["kb:mega-sale/campaign.md", "kb:mega-sale/pages/home.md"]);
+  });
+});
+
+describe("R0 页面清单", () => {
+  it("解析活动定义的页面清单", () => {
+    const types = parseCampaignPages(kb("mega-sale/campaign.md"));
+    assert.deepEqual(types.map((t) => [t.type, t.count, t.knowledge]), [
+      ["首页", 1, "pages/home.md"],
+      ["类目会场", undefined, "pages/category.md"],
+    ]);
+  });
+
+  it("需求要 4 个页面、计划只写了首页：总页数不符", async () => {
+    const report = await runAcceptance(plan, execution, fakeSource(goodPlatform()), { request: "创建 618 大促，巴西站，4 个页面" });
+    assert.equal(report.ok, false);
+    assert.deepEqual(failed(report), ["R0 总页数"]);
+  });
+
+  it("首页建了两个：固定数量不符", async () => {
+    const s = goodPlatform();
+    s.pages.push({ id: 9, name: "首页", offlineTime: "x" });
+    assert.ok(failed(await runAcceptance(plan, execution, fakeSource(s))).includes("R0 首页"));
+  });
+
+  it("页面知识不在活动定义里：拒绝按错的标准验收", async () => {
+    const wrong = { pages: [{ name: "首页", knowledge: "mega-sale/pages/brand-home.md" }] };
+    const report = await runAcceptance(wrong, execution, fakeSource(goodPlatform()));
+    assert.ok(failed(report).some((f) => f.startsWith("R0")));
+  });
+
+  it("从需求里读总页数", () => {
+    assert.equal(requestedPageCount("巴西站，32 个页面"), 32);
+    assert.equal(requestedPageCount("4个页面"), 4);
+    assert.equal(requestedPageCount("巴西站"), undefined);
   });
 });
 

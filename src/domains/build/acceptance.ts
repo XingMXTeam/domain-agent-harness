@@ -26,8 +26,8 @@ const ALLOWED_PLATFORM_TOOLS = new Set<string>(Object.values(READ_TOOLS));
 const KB_READ_TOOL = "kb_read";
 
 /** 已实现的规则编号；与 review-rules.md 的规则表由测试互相对齐 */
-export const IMPLEMENTED_RULES = ["R1", "R2", "R3", "R4", "R5"] as const;
-export type RuleId = (typeof IMPLEMENTED_RULES)[number] | "R0";
+export const IMPLEMENTED_RULES = ["R0", "R1", "R2", "R3", "R4", "R5"] as const;
+export type RuleId = (typeof IMPLEMENTED_RULES)[number];
 
 export interface RuleResult {
   rule: RuleId;
@@ -159,10 +159,16 @@ export function parseFloorTable(markdown: string): KbFloor[] {
 /**
  * 跑 R1–R5。期望来自知识库，实际来自平台，计划只用来确定「建了哪些页、每页对应哪篇页面知识」。
  */
+export interface AcceptanceOptions {
+  /** 用户原始需求；给出「N 个页面」时 R0 核对总页数 */
+  request?: string;
+}
+
 export async function runAcceptance(
   plan: unknown,
   execution: ExecutionResult | undefined,
   source: AcceptanceSource,
+  options: AcceptanceOptions = {},
 ): Promise<AcceptanceReport> {
   const pages = (((plan as { pages?: unknown } | null)?.pages ?? []) as PlanPage[]).filter(
     (p) => p && typeof p.name === "string",
@@ -195,6 +201,9 @@ export async function runAcceptance(
     results.push({ rule: "R0", target: `子场景 ${childSceneId}`, expected: "可读取页面列表", actual: (err as Error).message, pass: false });
     return { ran: true, ok: false, results };
   }
+
+  // R0 页面清单：期望来自活动定义（campaign.md），不信计划 —— 计划漏建的页面也要抓到
+  results.push(...(await checkPageList(pages, platformPages, readKnowledge, options.request)));
 
   for (const page of pages) {
     const pageName = page.name!;
@@ -277,6 +286,92 @@ export async function runAcceptance(
   }
 
   return { ran: true, ok: results.every((r) => r.pass), results };
+}
+
+// ── R0 页面清单 ─────────────────────────────────────────────
+
+export interface CampaignPageType {
+  type: string;
+  /** 固定数量；数量由需求决定（如 N）时为 undefined */
+  count?: number;
+  /** 命名模板，`<类目>会场` 这类占位转成通配 */
+  naming: string;
+  knowledge: string;
+}
+
+/** 解析活动定义里的「页面清单」表（表头含 `页面知识`） */
+export function parseCampaignPages(markdown: string): CampaignPageType[] {
+  const lines = markdown.split(/\r?\n/);
+  const headerAt = lines.findIndex((l) => l.trim().startsWith("|") && /页面知识/.test(l));
+  if (headerAt < 0) return [];
+  const cells = (l: string) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim().replace(/^`|`$/g, ""));
+  const header = cells(lines[headerAt]!);
+  const col = (name: string) => header.findIndex((h) => h.includes(name));
+  const [ti, ci, ni, ki] = [col("页面类型"), col("数量"), col("命名"), col("页面知识")];
+  const out: CampaignPageType[] = [];
+  for (const line of lines.slice(headerAt + 2)) {
+    if (!line.trim().startsWith("|")) break;
+    const c = cells(line);
+    const count = /^\d+$/.test(c[ci] ?? "") ? Number(c[ci]) : undefined;
+    out.push({ type: c[ti] ?? "", ...(count !== undefined ? { count } : {}), naming: c[ni] ?? "", knowledge: c[ki] ?? "" });
+  }
+  return out;
+}
+
+function namingPattern(naming: string): RegExp {
+  const esc = naming.split(/<[^>]+>/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return new RegExp(`^${esc.join(".+")}$`);
+}
+
+/** 需求里明确给出的总页数（「32 个页面」「4个页面」） */
+export function requestedPageCount(request?: string): number | undefined {
+  const m = request?.match(/(\d+)\s*个?(?:页面|页)/);
+  return m ? Number(m[1]) : undefined;
+}
+
+async function checkPageList(
+  pages: PlanPage[],
+  platformPages: PlatformPage[],
+  readKnowledge: (path: string) => Promise<string>,
+  request?: string,
+): Promise<RuleResult[]> {
+  const results: RuleResult[] = [];
+  const dirs = [...new Set(pages.map((p) => (p.knowledge ?? "").split("/")[0]).filter(Boolean))];
+  if (dirs.length !== 1) {
+    results.push({ rule: "R0", target: "活动类型", expected: "所有页面属于同一个活动目录", actual: dirs.length ? dirs.join(", ") : "无", pass: false });
+    return results;
+  }
+  const dir = dirs[0]!;
+  let types: CampaignPageType[];
+  try {
+    types = parseCampaignPages(await readKnowledge(`${dir}/campaign.md`));
+    if (!types.length) throw new Error(`${dir}/campaign.md 里没有页面清单表`);
+  } catch (err) {
+    results.push({ rule: "R0", target: dir, expected: "能读到活动定义的页面清单", actual: (err as Error).message, pass: false });
+    return results;
+  }
+
+  // 每页对照的知识必须是活动定义里列出的，防止计划指错标准
+  const allowed = new Set(types.map((t) => `${dir}/${t.knowledge}`));
+  for (const p of pages) {
+    if (p.knowledge && !allowed.has(p.knowledge)) {
+      results.push({ rule: "R0", target: p.name ?? "?", expected: `页面知识属于 ${[...allowed].join(" / ")}`, actual: p.knowledge, pass: false });
+    }
+  }
+
+  // 固定数量的页面类型：平台上按命名模板数，必须正好这么多
+  for (const t of types.filter((x) => x.count !== undefined)) {
+    const re = namingPattern(t.naming);
+    const n = platformPages.filter((p) => re.test(p.name)).length;
+    results.push({ rule: "R0", target: t.type, expected: `${t.count} 个（${t.naming}）`, actual: `${n} 个`, pass: n === t.count });
+  }
+
+  // 需求给了总页数：平台上的页面总数必须一致
+  const total = requestedPageCount(request);
+  if (total !== undefined) {
+    results.push({ rule: "R0", target: "总页数", expected: `${total} 个（需求）`, actual: `${platformPages.length} 个`, pass: platformPages.length === total });
+  }
+  return results;
 }
 
 /** 渲染验收结果：失败项逐条列出，通过项只计数 */

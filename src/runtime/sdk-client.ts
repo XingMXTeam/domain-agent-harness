@@ -49,7 +49,8 @@ export async function invokeSession(
     const tools = await collectTools(pool);
     logDebug(`[session:${label}] 可用工具 ${tools.length} 个`);
 
-    const allowed = req.allowedTools?.length ? new Set(req.allowedTools) : undefined;
+    // 传了数组（含空数组）就是白名单；空数组 = 不给任何工具。只有不传才不限制。
+    const allowed = req.allowedTools ? new Set(req.allowedTools) : undefined;
     const usableTools = allowed
       ? tools.filter((t) => allowed.has(t.name))
       : tools;
