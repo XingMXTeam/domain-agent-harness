@@ -76,9 +76,14 @@ export async function layer3Schedules(
       }
 
       // ── 3.2 组装写入载荷 ──────────────────────────────
-      const payload = buildSchedulePayload(job.schedule, existing.data, phases, dataPrepResults.get(
-        `${job.pageIndex}/${job.floorIndex}/${job.scheduleIndex}`,
-      ));
+      const payload = {
+        // 写排期必须带上落到哪个页面的哪个楼层，否则平台无法关联、验收也查不到
+        pageName: job.page.name,
+        floorName: job.schedule.floorName ?? job.schedule.name,
+        ...buildSchedulePayload(job.schedule, existing.data, phases, dataPrepResults.get(
+          `${job.pageIndex}/${job.floorIndex}/${job.scheduleIndex}`,
+        )),
+      };
 
       // ── 3.3 写入 ──────────────────────────────────────
       const update = await gcpCall(pool, "schedule_update", payload);

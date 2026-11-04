@@ -266,12 +266,45 @@ async function runDomain(
   const { runDomainSkill } = await import("./runtime/domain-skill.js");
   const outcome = await runDomainSkill(skill, userPrompt, domainName, ctx);
 
-  // Phase 3: Review —— 只读审查，与执行解耦
+  // Phase 3a: 验收 —— 代码按 review-rules 只读核对平台状态，pass / fail 由代码判定
+  const acceptance = skill === "init" ? await runBuildAcceptance(outcome, ctx) : undefined;
+
+  // Phase 3b: Review —— 模型只读审查，解释原因、给建议；不能推翻验收结论
   const { runReview, formatReview } = await import("./runtime/review.js");
-  const report = await runReview(skill, outcome.execution, domainName, ctx, {
-    llm: options.llm,
-  });
-  printAnswer(report ? formatReview(report) : outcome.summary);
+  const review = await runReview(
+    skill,
+    acceptance ? { ...(outcome.execution as object), acceptance } : outcome.execution,
+    domainName,
+    ctx,
+    { llm: options.llm },
+  );
+  const sections: string[] = [];
+  if (acceptance) {
+    const { formatAcceptance } = await import("./domains/build/acceptance.js");
+    sections.push(formatAcceptance(acceptance));
+  }
+  if (review) {
+    const blocked = acceptance?.ran === true && !acceptance.ok;
+    sections.push(formatReview(blocked ? { ...review, ok: false } : review));
+  } else {
+    sections.push(outcome.summary);
+  }
+  printAnswer(sections.join("\n\n"));
+}
+
+/** build 域 init 之后的验收；平台读不到时记成未通过而不是抛错 */
+async function runBuildAcceptance(
+  outcome: { execution: unknown; plan?: unknown },
+  ctx: RunContext,
+) {
+  const { runAcceptance, mcpAcceptanceSource } = await import("./domains/build/acceptance.js");
+  const { createMcpClientPool } = await import("./runtime/mcp-client.js");
+  const pool = await createMcpClientPool(ctx.mcpConfigPath);
+  try {
+    return await runAcceptance(outcome.plan, outcome.execution as never, mcpAcceptanceSource(pool));
+  } finally {
+    await pool.close();
+  }
 }
 
 /**

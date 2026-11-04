@@ -35,6 +35,7 @@ maxTurns: 12
 |---|---|
 | 活动定义的 `countryTimeRef` 格式 | `setup.childScene.countryTimeRef` |
 | 页面清单的每一页 | `pages[]` 一项，`name` 按命名规则，`nations` 是国家码字符串 |
+| 页面清单里该页对应的页面知识文件 | `pages[].knowledge`，写知识库里的相对路径，如 `mega-sale/pages/home.md`（验收按它对照楼层表，必填） |
 | 楼层表 `required = yes` | 一定加进该页 `floors`，按 `position` 排序 |
 | 楼层表 `required = no` | 只在该页类目命中 `industries`、或用户明确要求时加 |
 | 楼层 `component` | `floors[].template.name`（不写 version） |
@@ -59,6 +60,7 @@ maxTurns: 12
     {
       "name": "首页",
       "nations": "BR",
+      "knowledge": "mega-sale/pages/home.md",
       "floors": [
         { "template": { "name": "banner" } },
         { "template": { "name": "coupon" }, "hidden": true },

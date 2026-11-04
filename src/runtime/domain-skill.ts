@@ -70,6 +70,8 @@ export interface DomainSkillOutcome {
   summary: string;
   /** 结构化执行结果，交给 Review 阶段 */
   execution: unknown;
+  /** 模型产出的计划（init 才有），验收用它确定建了哪些页、每页对应哪篇页面知识 */
+  plan?: unknown;
 }
 
 /** init：校验 plan.json 并交给域 executor 执行 */
@@ -112,7 +114,7 @@ async function runInit(
     lines.push(`人工待办：${todos.length} 项`);
     for (const t of todos) lines.push(`- ${t.pageName} / ${t.floorName}${t.reason ? `：${t.reason}` : ""}`);
   }
-  return { summary: lines.join("\n"), execution };
+  return { summary: lines.join("\n"), execution, plan };
 }
 
 /** 计划里知识库标记为人工配置、不自动排期的楼层 */

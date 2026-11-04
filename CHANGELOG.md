@@ -2,6 +2,24 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 新增
+
+- **build 域验收（代码判定）**：init 执行后、模型审查前，按 `knowledge/shared/review-rules.md` 的 R1–R5 只读核对平台真实状态（`src/domains/build/acceptance.ts`）
+  - 期望值取自知识库楼层表，实际值取自平台；不看执行器自报，也不看计划写了哪些楼层，计划漏楼层同样会被抓到
+  - 每条输出 `rule / target / expected / actual / pass`
+  - 平台调用走 `READ_TOOLS` 白名单（`page_getList` / `page_listModules` / `schedule_getList`），白名单外的工具名直接抛错、不发请求
+  - 验收未通过时整体判为不通过，模型审查不能改判，只负责解释原因、给修复建议
+  - 计划没有任何页面标注知识库来源时跳过验收，并在输出里写明「未执行」
+  - 测试对齐 `review-rules.md` 的规则表与已实现规则，加规则不写实现会失败
+- `plan.json` 新增 `pages[].knowledge`：该页对应的页面知识文件，规划师必填
+- 本地假平台新增只读工具 `page_getList`、`schedule_getList`
+
+### 修复
+
+- 写排期时没有带页面和楼层（`schedule_update` 载荷缺 `pageName` / `floorName`），排期无法关联到楼层。执行器报「排期 5/5」，但平台上按楼层查不到任何排期；验收的 R2 首次跑就暴露了这个问题
+
 ## [0.1.0] - 2026-10-28
 
 首个开源版本。脱胎自一个内部多域 Agent Harness 的实战沉淀，

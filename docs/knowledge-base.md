@@ -38,6 +38,12 @@ consumers: [planner, reviewer]
 
 `consumers` 不含当前角色的文档不用读。
 
+## 验收规则由代码执行
+
+`shared/review-rules.md` 的每条规则都在 `src/domains/build/acceptance.ts` 里有对应实现，init 执行后由代码只读核对平台，而不是交给模型自由发挥。规划师要在每个页面上写 `pages[].knowledge`（该页的页面知识文件），验收按它取楼层表作为期望值。
+
+新增一条规则时，同时在 `acceptance.ts` 里实现并加进 `IMPLEMENTED_RULES`；测试会对齐两边，只改文档不写实现会失败。
+
 ## 楼层表
 
 L2 页面知识里的楼层表是规划的核心输入：

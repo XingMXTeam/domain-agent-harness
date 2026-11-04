@@ -22,6 +22,7 @@
     {
       "name": "首页",
       "nations": "BR",
+      "knowledge": "mega-sale/pages/home.md",
       "floors": [
         {
           "name": "首屏 Banner",
