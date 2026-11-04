@@ -50,6 +50,14 @@
 | `CAMPAIGN_MCP_TOKEN` | 投放平台 |
 | `KM_MCP_TOKEN` | 知识库 |
 
+### 知识库
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `KM_MCP_URL` | `http://127.0.0.1:7803/mcp` | build / gop 域的知识库 MCP 地址 |
+| `KB_DIR` | `./knowledge` | `npm run kb:mcp` 读取的 Markdown 目录 |
+| `PORT` | `7803` | `npm run kb:mcp` 的监听端口 |
+
 > 未设置的环境变量会被替换成空串，并在日志里告警。**不会**把字面量 `{{XXX}}` 写进磁盘上的 `mcp-config.json`。
 
 ### 运行时行为

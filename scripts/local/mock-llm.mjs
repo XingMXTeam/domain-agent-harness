@@ -5,7 +5,8 @@
  * 按 system prompt 认出当前阶段，扮演对应角色：
  *   Catalog 路由 → {"domain": ...}
  *   build brain  → {"skill": ...}
- *   init 规划师  → 先调一次只读工具看模板库，再按 spec.md 输出 plan.json
+ *   init 规划师  → 按 L0 → L1 → L2 逐层读知识库，用楼层表组装 plan.json
+ *                  （知识库服务没起时退回到按 prompt 拼一份固定计划）
  *   审查员       → 读执行结果，输出 review JSON
  *   查询助手     → 调 scene_getList 后作答
  *
@@ -43,6 +44,105 @@ export function planFromPrompt(prompt) {
   };
 }
 
+// ── 知识库驱动的规划 ─────────────────────────────────────────
+
+/** 把 Markdown 里第一张表头含 key 的表格解析成对象数组 */
+export function parseTable(md, key) {
+  const lines = md.split(/\r?\n/);
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (!lines[i].trim().startsWith("|") || !lines[i].includes(key) || !/^\s*\|[\s|:-]+\|\s*$/.test(lines[i + 1])) continue;
+    const cells = (l) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim().replace(/^`|`$/g, ""));
+    const head = cells(lines[i]);
+    const rows = [];
+    for (let j = i + 2; j < lines.length && lines[j].trim().startsWith("|"); j++) {
+      const c = cells(lines[j]);
+      rows.push(Object.fromEntries(head.map((h, k) => [h, c[k] ?? ""])));
+    }
+    return rows;
+  }
+  return [];
+}
+
+/** 从对话里还原「读过的文档 → 内容」 */
+function readDocs(messages) {
+  const docs = {};
+  const pending = {};
+  for (const m of messages ?? []) {
+    for (const p of Array.isArray(m.content) ? m.content : []) {
+      if (p.type === "tool_use" && /kb_read$/.test(p.name)) pending[p.id] = p.input?.path;
+      if (p.type === "tool_result" && pending[p.tool_use_id] && !p.is_error) {
+        docs[pending[p.tool_use_id]] = typeof p.content === "string" ? p.content : textOf(p.content);
+      }
+    }
+  }
+  return docs;
+}
+
+const NATIONS = [[/巴西|BR/, "BR"], [/墨西哥|MX/, "MX"], [/西班牙|ES/, "ES"]];
+
+/** 用知识库内容组装计划（剧本模型扮演「按规则翻译」的规划师） */
+export function planFromKnowledge(prompt, dir, docs) {
+  const campaign = docs[`${dir}/campaign.md`] ?? "";
+  const notes = [];
+  const nation = NATIONS.find(([re]) => re.test(prompt))?.[1] ?? (notes.push("用户没给国家，暂按 BR"), "BR");
+  const tag = prompt.match(/(\d{2,4}|双\s*11|黑五)/)?.[1]?.replace(/\s/g, "") ?? "campaign";
+  const year = prompt.match(/20\d{2}/)?.[0] ?? "2026";
+  const brand = prompt.match(/(\S+?)\s*品牌日/)?.[1]?.replace(/^(创建|搭建|新建)/, "") || "品牌";
+  const label = prompt.match(/(\S+?大促)/)?.[1] ?? (dir === "brand-day" ? `${brand}品牌日` : "大促");
+
+  const refFmt = campaign.match(/`(<国家码小写>-[^`]+)`/)?.[1] ?? "<国家码小写>-<活动标识>-<年份>";
+  const countryTimeRef = refFmt.replace("<国家码小写>", nation.toLowerCase()).replace("<活动标识>", tag).replace("<年份>", year);
+
+  const total = Number(prompt.match(/(\d+)\s*个?页面/)?.[1] ?? 0);
+  const cats = (campaign.match(/类目按下列顺序取前 N 个：(.+)/)?.[1] ?? "").replace(/。$/, "").split("、").filter(Boolean);
+  const n = total > 1 ? total - 1 : 3;
+
+  const pages = [], schedules = [], manualTodos = [];
+  for (const row of parseTable(campaign, "页面类型")) {
+    const file = `${dir}/${row["页面知识"]}`;
+    const floorsKb = parseTable(docs[file] ?? "", "component");
+    if (!floorsKb.length) { notes.push(`缺少页面知识 ${file}`); continue; }
+    const instances = row["数量"].trim() === "1"
+      ? [{ name: row["命名"].replace("<品牌名>", brand), cat: "" }]
+      : cats.slice(0, n).map((cat) => ({ name: row["命名"].replace("<类目>", cat), cat }));
+    for (const { name, cat } of instances) {
+      const picked = floorsKb
+        .filter((f) => f.required === "yes" || (cat && f.industries.split(",").includes(cat)))
+        .sort((a, b) => Number(a.position) - Number(b.position));
+      pages.push({ name, nations: nation, floors: picked.map((f) => ({ template: { name: f.component }, ...(f.hidden === "yes" ? { hidden: true } : {}) })) });
+      for (const f of picked) {
+        if (f.scheduling_type === "selection") schedules.push({ nations: [nation], pageName: name, floorName: f.component, contentData: { selectionPrompt: f.selection_prompt.replace("{类目}", cat).replace("{品牌}", brand) } });
+        else if (f.scheduling_type === "strategy") schedules.push({ nations: [nation], pageName: name, floorName: f.component, contentData: { strategy: "auto" } });
+        else if (f.scheduling_type === "manual") manualTodos.push({ pageName: name, floorName: f.component, reason: `${f.name}需人工配置` });
+      }
+    }
+  }
+  const point = campaign.match(/建一个点位：`([^`]+)`/)?.[1];
+  return {
+    setup: { childScene: { name: `${label}-${nation}`, nations: nation, countryTimeRef }, initModulePool: true },
+    pages, schedules,
+    ...(manualTodos.length ? { manualTodos } : {}),
+    ...(point ? { points: [{ name: point }] } : {}),
+    ...(notes.length ? { notes } : {}),
+  };
+}
+
+/** 规划师的下一步：还缺哪篇文档就读哪篇，读齐了就出计划 */
+export function plannerStep(prompt, messages, tools) {
+  const read = "mcp__knowledge__kb_read";
+  if (!tools.includes(read)) return { plan: planFromPrompt(prompt) };
+  const docs = readDocs(messages);
+  if (!docs["README.md"]) return { read: "README.md" };
+  const types = parseTable(docs["README.md"], "目录");
+  const dir = (types.find((t) => prompt.includes(t["类型"])) ?? types[0])?.["目录"]?.replace(/\/$/, "") ?? "mega-sale";
+  if (!docs[`${dir}/campaign.md`]) return { read: `${dir}/campaign.md` };
+  for (const row of parseTable(docs[`${dir}/campaign.md`], "页面类型")) {
+    const file = `${dir}/${row["页面知识"]}`;
+    if (!docs[file]) return { read: file };
+  }
+  return { plan: planFromKnowledge(prompt, dir, docs) };
+}
+
 function reviewFrom(userText) {
   const json = userText.slice(userText.indexOf("{"));
   let exec = {};
@@ -61,14 +161,13 @@ export function respond(payload) {
   const hadToolResult = JSON.stringify(messages).includes("tool_result");
   const tools = (payload.tools ?? []).map((t) => t.name);
   const text = (t) => [{ type: "text", text: typeof t === "string" ? t : JSON.stringify(t) }];
-  const toolUse = (name, input) => [{ type: "tool_use", id: `call_${Date.now()}`, name, input }];
+  const toolUse = (name, input) => [{ type: "tool_use", id: `call_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, name, input }];
 
   if (system.includes("Domain Catalog")) return text({ domain: /创建|搭建|新建/.test(userText) ? "build" : /投放|排期包/.test(userText) ? "gop" : "qa" });
   if (system.includes("build 域大脑")) return text({ skill: /修复|修一下|fix/i.test(userText) ? "fix" : /创建|搭建|新建/.test(userText) ? "init" : "query" });
   if (system.includes("活动搭建规划师")) {
-    const t = "mcp__platform__modulePool_getModulesWithTemplate";
-    if (!hadToolResult && tools.includes(t)) return toolUse(t, {});
-    return text(planFromPrompt(userText));
+    const step = plannerStep(userText, messages, tools);
+    return step.read ? toolUse("mcp__knowledge__kb_read", { path: step.read }) : text(step.plan);
   }
   if (system.includes("搭建结果审查员")) return text(reviewFrom(userText));
   if (system.includes("活动查询助手")) {

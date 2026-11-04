@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 一键本地演示：起假平台 MCP + 剧本模型 → 跑真实 CLI（build 域三段式）→ 打印平台最终状态。
+ * 一键本地演示：起假平台 MCP + 知识库 MCP + 剧本模型 → 跑真实 CLI（build 域三段式）→ 打印平台最终状态。
  *
  *   npm run demo                              # 剧本模型
  *   npm run demo -- "创建 618 大促，巴西站，8 个页面"
@@ -13,11 +13,17 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPlatform, startMcpServer } from "./mock-platform-mcp.mjs";
 import { startMockLlm } from "./mock-llm.mjs";
+import { createKnowledgeBase, startKnowledgeServer } from "../knowledge-mcp.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const prompt = process.argv.slice(2).join(" ") || "创建 618 大促，巴西站，4 个页面，首屏放 Banner";
 const platform = createPlatform();
 const mcp = await startMcpServer(platform);
+const kb = createKnowledgeBase(process.env.KB_DIR ?? join(ROOT, "knowledge"));
+const kbReads = [];
+const kbCall = kb.call.bind(kb);
+kb.call = (name, args) => { kbReads.push(`${name}(${args?.path ?? args?.query ?? ""})`); return kbCall(name, args); };
+const km = await startKnowledgeServer(kb);
 const useReal = process.env.DEMO_REAL_LLM === "1";
 const llm = useReal ? null : await startMockLlm();
 const runsRoot = process.env.DAH_RUNS_ROOT ?? mkdtempSync(join(tmpdir(), "dah-demo-"));
@@ -27,11 +33,12 @@ const env = {
   ...(useReal ? {} : { LLM_PROVIDER: "anthropic", ANTHROPIC_BASE_URL: `http://127.0.0.1:${llm.port}`, ANTHROPIC_API_KEY: "local" }),
   PLATFORM_MCP_URL: `http://127.0.0.1:${mcp.port}/mcp`,
   LOCALE_MCP_URL: `http://127.0.0.1:${mcp.port}/mcp`,
+  KM_MCP_URL: `http://127.0.0.1:${km.port}/mcp`,
   DAH_RUNS_ROOT: runsRoot,
   DAH_LOG_LEVEL: process.env.DAH_LOG_LEVEL ?? "info",
 };
 
-console.log(`\n▶ prompt: ${prompt}\n▶ model : ${useReal ? `real (${process.env.LLM_PROVIDER ?? ".env"})` : "local script"}\n▶ mcp   : http://127.0.0.1:${mcp.port}/mcp\n`);
+console.log(`\n▶ prompt: ${prompt}\n▶ model : ${useReal ? `real (${process.env.LLM_PROVIDER ?? ".env"})` : "local script"}\n▶ mcp   : http://127.0.0.1:${mcp.port}/mcp\n▶ kb    : http://127.0.0.1:${km.port}/mcp (${kb.root})\n`);
 const t0 = Date.now();
 const child = spawn("node", [join(ROOT, "dist", "index.js"), prompt], { cwd: ROOT, env, stdio: ["ignore", "pipe", "inherit"] });
 let stdout = "";
@@ -46,6 +53,7 @@ console.log(`子场景 ${db.childScenes.length} · 页面 ${db.pages.length} · 
 console.log(`页面 offlineTime: ${[...new Set(db.pages.map((p) => p.offlineTime))].join(", ")}`);
 console.log(`MCP 调用 ${stats.calls} 次，失败 ${stats.failures}，最大并发 ${stats.maxInFlight}，总耗时 ${secs}s`);
 console.log(`按工具: ${Object.entries(stats.byTool).map(([k, v]) => `${k}×${v}`).join("  ")}`);
+console.log(`知识库读取 ${kbReads.length} 次: ${kbReads.join(" → ") || "无"}`);
 console.log(`运行产物: ${runsRoot}`);
-mcp.server.close(); llm?.server.close();
+mcp.server.close(); km.server.close(); llm?.server.close();
 process.exit(code ?? 1);

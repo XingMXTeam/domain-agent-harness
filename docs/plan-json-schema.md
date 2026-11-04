@@ -102,6 +102,17 @@ page.floors[].schedules[]
 
 ---
 
+### 7. 知识库带来的两个字段
+
+规划师按知识库组装计划时会多写两个字段，Executor 不执行它们：
+
+| 字段 | 来源 | 用途 |
+|---|---|---|
+| `manualTodos[]` | 楼层 `scheduling_type = manual` | `{ pageName, floorName, reason }`，不写排期，执行结果末尾列为「人工待办」 |
+| `notes[]` | 知识库缺失或与需求冲突 | 给人看的备注 |
+
+详见 [knowledge-base.md](knowledge-base.md)。
+
 ## Executor 分层
 
 ```

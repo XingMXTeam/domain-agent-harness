@@ -77,6 +77,8 @@ export interface SessionRequest {
   mcpConfigPath: string;
   /** 允许调用的工具白名单 */
   allowedTools?: string[];
+  /** 最大工具轮数；缺省用会话默认上限 */
+  maxTurns?: number;
   /** 本次调用的业务标签（用于 trace 与日志） */
   label?: string;
 }
