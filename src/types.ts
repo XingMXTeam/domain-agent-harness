@@ -83,19 +83,34 @@ export interface SessionRequest {
   label?: string;
 }
 
-/** 流水线中的一个步骤。 */
+/**
+ * 流水线中的一个步骤。`agent` 与 `pipeline` 二选一。
+ *
+ * 表达式：`${a.b.c}` 从当前作用域取值（作用域 = user_prompt + 已完成步骤的产物 + foreach 的 item / index）。
+ * 兼容旧写法：`input` / `foreach` 写一个不带 `${}` 的键名，等价于 `${键名}`。
+ */
 export interface PipelineStep {
-  /** 步骤名 */
-  name: string;
-  /** 使用的 Agent 提示词文件（相对域目录） */
-  agent: string;
-  /** 上一步的产物键；缺省表示消费 user_prompt */
-  input?: string;
-  /** 本步骤产物写入 context 的键 */
-  output: string;
-  /** 对上一步产物做 foreach 展开 */
+  /** 步骤 ID（与 name 二选一，优先 id） */
+  id?: string;
+  /** 步骤名（旧写法） */
+  name?: string;
+  /** Agent 提示词文件（相对域目录） */
+  agent?: string;
+  /** 子流水线文件（相对域目录） */
+  pipeline?: string;
+  /** 输入：表达式、带表达式的对象，或旧写法的上下文键名；agent 步骤缺省为 user_prompt */
+  input?: unknown;
+  /** 产物写入作用域的键；缺省为步骤 ID */
+  output?: string;
+  /** 对数组逐项执行；项在作用域里是 `item`，下标是 `index` */
   foreach?: string;
-  /** 该步骤产物的 JSON Schema 文件（相对域目录） */
+  /** foreach 的并发数，默认 1（顺序执行） */
+  parallel?: number;
+  /** 条件：表达式结果为假则跳过本步骤 */
+  when?: string;
+  /** 失败重试次数（模型调用失败、输出不是 JSON、schema 校验失败时重试），默认 0 */
+  retries?: number;
+  /** 产物的 JSON Schema 文件（相对域目录）；优先于 Agent frontmatter 的 outputSchema */
   schema?: string;
   /** 额外说明 */
   description?: string;
@@ -105,6 +120,8 @@ export interface PipelineStep {
 export interface Pipeline {
   name: string;
   description?: string;
+  /** 流水线的产物：表达式或带表达式的对象；缺省为最后一个执行的步骤的产物 */
+  output?: unknown;
   steps: PipelineStep[];
 }
 

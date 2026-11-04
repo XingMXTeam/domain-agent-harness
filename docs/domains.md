@@ -89,8 +89,8 @@ export const executor: DomainExecutor = {
 **流水线**
 
 ```
-deployment.pipeline.yaml     plan → style → schedule → publish → review
-floor-deployment.pipeline.yaml   schedule → publish
+deployment.pipeline.yaml         plan → floors（foreach 楼层，并发 4，跑子流水线）→ review
+floor-deployment.pipeline.yaml   style → schedule（when 样式包成功）→ publish（when 排期成功）
 ```
 
 详见 [pipeline.md](pipeline.md)。

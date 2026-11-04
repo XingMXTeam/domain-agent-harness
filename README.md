@@ -47,10 +47,10 @@
 - **LLM Provider 可切换**
   - Anthropic / OpenAI 兼容端点 / DashScope 兼容模式，同一套抽象
 - **MCP 原生**
-  - Streamable HTTP 与 stdio 两种传输；工具名统一 `mcp__<server>__<tool>`
+  - Streamable HTTP 传输（`stdio` 配置项已预留，客户端尚未实现）；工具名统一 `mcp__<server>__<tool>`
   - 失败自动重试 + 会话重建
-- **并发执行器**
-  - 分层并发 + 并发上限（默认 8）；单点失败不扩散
+- **并发执行**
+  - build 执行器分层并发，单点失败不扩散（分层内暂未限流）；pipeline 的 foreach 用 `parallel` 控制并发上限
 - **三阶段模型**
   - Plan（模型）→ Execute（代码并发）→ Review（模型只读审查）
 - **知识库驱动规划**
@@ -136,7 +136,9 @@ src/
 │   ├── https-client.ts          POST + SSE 流式 POST
 │   ├── run-context.ts           运行上下文 / MCP 配置生成
 │   ├── prompt-file.ts           提示词 frontmatter（allowedTools / maxTurns）
-│   ├── pipeline-engine.ts       声明式流水线引擎
+│   ├── pipeline-engine.ts       声明式流水线引擎（when / retries / foreach + parallel / 子流水线）
+│   ├── pipeline-state.ts        state.json 与步骤产物落盘
+│   ├── expr.ts                  ${a.b} 表达式与 when 真值规则
 │   ├── schema-resolver.ts       轻量 JSON Schema 校验
 │   ├── tool-runner.ts           代码侧工具执行器
 │   ├── parallel.ts              并发执行器
@@ -194,18 +196,22 @@ init/spec.md 产出 plan.json ──schema 校验──┐
 
 ```yaml
 steps:
-  - name: plan
-    agent: agents/deployment-planner.md
-    schema: schemas/deployment-plan.schema.json
+  - id: plan
+    agent: agents/deployment-planner.md      # frontmatter 里声明工具白名单和 outputSchema
     output: deployment_plan
-  - name: style
-    agent: agents/style-builder.md
-    input: deployment_plan
-    schema: schemas/style-results.schema.json
-    output: style_results
+    retries: 1
+  - id: floors
+    foreach: ${deployment_plan.floors}
+    parallel: 4
+    pipeline: pipelines/floor-deployment.pipeline.yaml
+    input: { floor: "${item}", activity: "${deployment_plan.activity}" }
+  - id: review
+    agent: agents/deployment-reviewer.md
+    when: ${floors}
+    input: { plan: "${deployment_plan}", floors: "${floors}" }
 ```
 
-每步的产物由 JSON Schema 校验，通过后写入 `context[step.output]` 传给下一步；校验不过直接中断，不会把脏数据带到下游。
+步骤之间用 `${a.b}` 表达式取值，支持 `when` 条件、`retries` 重试、`foreach` + `parallel` 并发、嵌套子流水线；每步产物过 JSON Schema 校验，校验不过就重试或中断，不会把脏数据带到下游。每次运行写 `state.json`（每步状态、重试次数、错误）和 `artifacts/<stepId>.json`。详见 [`docs/pipeline.md`](docs/pipeline.md)。
 
 适合「多阶段、每阶段有明确契约」的场景。
 
