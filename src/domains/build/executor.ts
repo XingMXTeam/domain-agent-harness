@@ -66,7 +66,7 @@ export const executor: DomainExecutor = {
           ...(p.error ? { error: p.error } : {}),
         })),
         ...pageBuild.modules.map((m) => ({
-          step: "module",
+          step: m.skipped ? "module-skipped" : "module",
           target: `${m.pageName}/${m.floorName}`,
           ok: m.ok,
           ...(m.error ? { error: m.error } : {}),
@@ -111,7 +111,8 @@ export const executor: DomainExecutor = {
       const summary = [
         `页面 ${pageBuild.pages.filter((p) => p.ok).length}/${pageBuild.pages.length}`,
         `模块 ${pageBuild.modules.filter((m) => m.ok).length}/${pageBuild.modules.length}`,
-        `排期 ${scheduleStats.success}/${scheduleStats.total}`,
+        `排期 ${scheduleStats.success}/${scheduleStats.total}` +
+          (scheduleStats.skipped ? `（跳过 ${scheduleStats.skipped}）` : ""),
       ].join("，");
 
       return { success, items, summary };

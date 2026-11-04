@@ -72,3 +72,39 @@ export async function parallelFilter<T>(
   const outcomes = await parallelMap(tasks, options);
   return outcomes.filter((o) => o.ok && o.value !== undefined).map((o) => o.value as T);
 }
+
+/**
+ * 计数信号量 —— 给「散落在多层、各自 Promise.all」的调用设一个全局并发上限。
+ *
+ * parallelMap 只能管住一次批量；executor 的页面、模块、排期、点位各自并发，
+ * 叠起来会超过下游能承受的量（demo 实测 13，设定 8）。把信号量挂在调用入口上，
+ * 不管上层怎么并发，同一时刻打到平台的请求都不超过上限。
+ */
+export class Semaphore {
+  private active = 0;
+  private readonly waiters: Array<() => void> = [];
+
+  constructor(readonly limit: number) {
+    if (!Number.isInteger(limit) || limit < 1) throw new Error(`并发上限必须是正整数: ${limit}`);
+  }
+
+  get inFlight(): number {
+    return this.active;
+  }
+
+  async run<T>(task: () => Promise<T>): Promise<T> {
+    if (this.active >= this.limit) {
+      await new Promise<void>((resolve) => this.waiters.push(resolve));
+    } else {
+      this.active += 1;
+    }
+    try {
+      return await task();
+    } finally {
+      const next = this.waiters.shift();
+      // 名额直接交给下一个等待者，active 不变；没人等才释放
+      if (next) next();
+      else this.active -= 1;
+    }
+  }
+}

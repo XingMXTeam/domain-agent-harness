@@ -3,9 +3,9 @@
  *
  * 页面之间互不依赖，因此整层并发执行。
  */
-import type { McpClientPool } from "../../runtime/mcp-client.js";
+import type { McpCallResult, McpClientPool } from "../../runtime/mcp-client.js";
 import { log, logError } from "../../runtime/log.js";
-import { extractNumericId, gcpCall } from "./helpers.js";
+import { extractNumericId, gcpCall, PLATFORM_SERVER } from "./helpers.js";
 import type { ModuleResult, PageResult, ResolvedPlan } from "./types.js";
 
 export interface PageBuildResult {
@@ -29,12 +29,13 @@ export async function layer2PageBuild(
   // ── 建页面（并发）───────────────────────────────────────
   const pageSettled = await Promise.allSettled(
     pages.map(async (page) => {
-      const result = await gcpCall(pool, "pageAgent_create", {
-        childSceneId,
-        name: page.name,
-        nations: page.nations,
-        offlineTime,
-      });
+      const result = await gcpCall(
+        pool,
+        "pageAgent_create",
+        { childSceneId, name: page.name, nations: page.nations, offlineTime },
+        // 建页报瞬时错误时，页面可能已落地；重试前先按名字查一次，避免建出两个同名页面
+        { recover: () => findPageByName(pool, childSceneId, page.name) },
+      );
       if (!result.success) {
         return {
           pageName: page.name,
@@ -91,6 +92,16 @@ export async function layer2PageBuild(
 
   const moduleSettled = await Promise.allSettled(
     moduleJobs.map(async (job) => {
+      // 页面没建出来：不发请求，直接记为跳过，避免一串「pageId 必填」把真正的原因淹掉
+      if (job.pageId === undefined) {
+        return {
+          pageName: job.pageName,
+          floorName: job.floorName,
+          ok: false,
+          skipped: true,
+          error: "页面未创建，跳过",
+        } satisfies ModuleResult;
+      }
       const result = await gcpCall(pool, "module_addModule", {
         pageId: job.pageId,
         childSceneId,
@@ -126,7 +137,7 @@ export async function layer2PageBuild(
   });
 
   // ── 隐藏端（并发，与挂模块相互独立）─────────────────────
-  const hiddenJobs = moduleJobs.filter((job) => job.hidden);
+  const hiddenJobs = moduleJobs.filter((job) => job.hidden && job.pageId !== undefined);
   await Promise.allSettled(
     hiddenJobs.map(async (job) => {
       const result = await gcpCall(pool, "module_showOrHide", {
@@ -145,9 +156,32 @@ export async function layer2PageBuild(
 
   const okPages = pageResults.filter((r) => r.ok).length;
   const okModules = moduleResults.filter((r) => r.ok).length;
-  log(`[exec] 页面搭建完成: 页面 ${okPages}/${pageResults.length}，模块 ${okModules}/${moduleResults.length}`);
+  const skipped = moduleResults.filter((r) => r.skipped).length;
+  log(
+    `[exec] 页面搭建完成: 页面 ${okPages}/${pageResults.length}，模块 ${okModules}/${moduleResults.length}` +
+      (skipped ? `（${skipped} 个因页面失败跳过）` : ""),
+  );
 
   return { pages: pageResults, modules: moduleResults };
+}
+
+/**
+ * 按名字在子场景下找页面 —— 建页重试前的落地核查。
+ */
+export async function findPageByName(
+  pool: McpClientPool,
+  childSceneId: number,
+  name: string,
+): Promise<McpCallResult | undefined> {
+  const list = await pool.callTool(PLATFORM_SERVER, "page_getList", { childSceneId });
+  if (!list.success) return undefined;
+  const rows = Array.isArray(list.data)
+    ? list.data
+    : ((list.data as { list?: unknown[] } | undefined)?.list ?? []);
+  const hit = (rows as Array<Record<string, unknown>>).find((row) => row.name === name);
+  if (!hit) return undefined;
+  const id = extractNumericId(hit);
+  return id === undefined ? undefined : { success: true, data: { id } };
 }
 
 /**

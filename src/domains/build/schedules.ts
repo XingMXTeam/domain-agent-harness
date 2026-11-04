@@ -63,8 +63,28 @@ export async function layer3Schedules(
     return stats;
   }
 
+  // 楼层没挂上（模块失败或因页面失败跳过）的排期不写：写了平台也关联不上，
+  // 却会让「排期 n/n」看起来全部成功，掩盖必选楼层缺失。
+  const mountedFloors = new Set(
+    moduleResults.filter((m) => m.ok).map((m) => `${m.pageName}/${m.floorName}`),
+  );
+  const pageOk = new Set(pageResults.filter((p) => p.ok).map((p) => p.pageName));
+  const floorKey = (job: (typeof jobs)[number]) =>
+    `${job.page.name}/${job.page.floors[job.floorIndex]?.name ?? job.schedule.floorName ?? ""}`;
+  const runnable = jobs.filter((job) => mountedFloors.has(floorKey(job)));
+  const skipped = jobs.filter((job) => !mountedFloors.has(floorKey(job)));
+  if (skipped.length > 0) {
+    stats.skipped = skipped.length;
+    stats.failed += skipped.length;
+    for (const job of skipped) {
+      logError(
+        `[exec] 排期跳过 ${floorKey(job)}: ${pageOk.has(job.page.name) ? "楼层未挂上" : "页面未创建"}`,
+      );
+    }
+  }
+
   const settled = await Promise.allSettled(
-    jobs.map(async (job) => {
+    runnable.map(async (job) => {
       // ── 3.1 读已有排期 ────────────────────────────────
       const existing = await gcpCall(pool, "schedule_createOrGetList", {
         pageName: job.page.name,
@@ -99,7 +119,7 @@ export async function layer3Schedules(
       stats.success += 1;
     } else {
       stats.failed += 1;
-      const job = jobs[index]!;
+      const job = runnable[index]!;
       logError(
         `[exec] 排期写入失败 ${job.page.name}/${job.schedule.name}:`,
         outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason),
@@ -107,7 +127,10 @@ export async function layer3Schedules(
     }
   });
 
-  log(`[exec] 排期完成: ${stats.success}/${stats.total} 成功`);
+  log(
+    `[exec] 排期完成: ${stats.success}/${stats.total} 成功` +
+      (stats.skipped ? `（${stats.skipped} 个因楼层缺失跳过）` : ""),
+  );
   return stats;
 }
 
