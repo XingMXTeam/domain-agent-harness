@@ -81,7 +81,9 @@
 3. **校验不经模型的手**：验收 pass / fail 由代码判定，模型只能解释失败原因，不能改判。
 4. **单线程写、只读可并行**：写操作保持单线程单 Agent；额外 Agent 只贡献智能（审查、检索），不贡献动作。
 
-详见 [`docs/agent-architecture-guide.md`](docs/agent-architecture-guide.md)：行业共识（12-Factor Agents、Cognition 单线程原则、框架收敛与持久执行）与本仓的对应关系，以及按此方法新增域的完整示例（finance 财报解析域）。
+串联判据（引擎内部怎么传、怎么分工）：**纪律没得选，拓扑看耦合 — 写耦合就单线程、并行只给代码；只读独立才发散，合并只合情报不合动作；值怕变形传键，不怕传值。**
+
+详见 [`docs/agent-architecture-guide.md`](docs/agent-architecture-guide.md)：行业共识（12-Factor Agents、Cognition 单线程原则、框架收敛与持久执行）与本仓的对应关系、串联与协作判据的展开，以及按此方法新增域的完整示例（finance 财报解析域）。
 
 ---
 
