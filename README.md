@@ -83,7 +83,7 @@
 
 串联判据（引擎内部怎么传、怎么分工）：**纪律没得选，拓扑看耦合 — 写耦合就单线程、并行只给代码；只读独立才发散，合并只合情报不合动作；值怕变形传键，不怕传值。**
 
-详见 [`docs/agent-architecture-guide.md`](docs/agent-architecture-guide.md)：行业共识（12-Factor Agents、Cognition 单线程原则、框架收敛与持久执行）与本仓的对应关系、串联与协作判据的展开，以及按此方法新增域的完整示例（finance 财报解析域）。
+详见 [`docs/agent-architecture-guide.md`](docs/agent-architecture-guide.md)：行业共识（12-Factor Agents、Cognition 单线程原则、框架收敛与持久执行、工具上下文经济学）与本仓的对应关系、串联与协作判据的展开、文末的本仓最佳实践清单，以及按此方法新增域的完整示例（finance 财报解析域）。
 
 ---
 
