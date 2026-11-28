@@ -1,0 +1,50 @@
+[
+  {
+    "id": "TASK-1",
+    "title": "Migrate runtime into scaffolds/plan-execute and configure npm workspaces",
+    "requirements": ["REQ-1", "REQ-2", "REQ-6"],
+    "checks": [
+      "npm run typecheck",
+      "npm test",
+      "npm run build",
+      "npm run smoke",
+      "npm run list-domains"
+    ]
+  },
+  {
+    "id": "TASK-2",
+    "title": "Author root contracts/ (C1–C11 universal contracts)",
+    "requirements": ["REQ-4"],
+    "checks": [
+      "node -e \"const fs=require('fs'); const s=fs.readFileSync('contracts/universal-contracts.md','utf8'); for(let i=1;i<=11;i++) if(!s.includes('C'+i)) process.exit(1);\""
+    ]
+  },
+  {
+    "id": "TASK-3",
+    "title": "Author root playbook/ (L0–L4 decision tree, pattern blocks, framework guide, and 4 case breakdowns)",
+    "requirements": ["REQ-3"],
+    "checks": [
+      "test -f playbook/README.md && test -f playbook/patterns.md && test -f playbook/frameworks.md && test -f playbook/cases/visual-studio.md && test -f playbook/cases/atoms.md && test -f playbook/cases/campaign-build.md && test -f playbook/cases/finance.md"
+    ]
+  },
+  {
+    "id": "TASK-4",
+    "title": "Rewrite root README.md and AGENTS.md for ShipKeel",
+    "requirements": ["REQ-1"],
+    "checks": [
+      "grep -q 'ShipKeel' README.md && grep -q 'C11' AGENTS.md && grep -q 'frontend-harness:start' AGENTS.md"
+    ]
+  },
+  {
+    "id": "TASK-5",
+    "title": "Update CI, ShipProof config/standards, and verify full-repo integrity",
+    "requirements": ["REQ-5", "REQ-6"],
+    "checks": [
+      "npm run typecheck",
+      "npm test",
+      "npm run build",
+      "npm run smoke",
+      "npm run list-domains"
+    ]
+  }
+]

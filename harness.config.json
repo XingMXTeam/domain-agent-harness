@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "host": "generic",
+  "stack": "node",
+  "gateCommands": [
+    "npm run typecheck",
+    "npm test",
+    "npm run build",
+    "node scripts/smoke-e2e.mjs",
+    "node dist/index.js --list-domains"
+  ],
+  "budgets": {
+    "maxMacroCycles": 5,
+    "maxTaskRetries": 3
+  },
+  "autoStop": {
+    "requiredStablePasses": 2
+  },
+  "evaluation": {
+    "passScore": 0.9,
+    "commandTimeoutMs": 120000
+  },
+  "git": {
+    "requireCommitPerTask": true
+  },
+  "evidence": {
+    "requireVerify": true
+  }
+}

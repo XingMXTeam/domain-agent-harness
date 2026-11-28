@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "feature": "shipkeel-m1",
+  "title": "ShipKeel M1: Repo Restructure, Playbook & Contracts",
+  "phase": "clarify",
+  "createdAt": 1795853077807,
+  "updatedAt": 1795853077811,
+  "macroCycle": {
+    "current": 1,
+    "max": 5
+  },
+  "consecutivePasses": 0,
+  "clarificationComplete": false,
+  "tasks": [],
+  "history": [
+    {
+      "at": 1795853077811,
+      "event": "prd-imported",
+      "from": "/Users/felix/.gemini/antigravity/brain/49b3713e-f47a-4660-bf91-eb4b441d10e8/shipkeel-decisions.md",
+      "requirements": 0,
+      "numberingComplete": false
+    }
+  ],
+  "lastEvaluation": null,
+  "lastReview": null,
+  "lastFailure": null,
+  "prd": {
+    "source": "imported",
+    "from": "/Users/felix/.gemini/antigravity/brain/49b3713e-f47a-4660-bf91-eb4b441d10e8/shipkeel-decisions.md",
+    "importedAt": "2026-11-28T08:04:37.807Z",
+    "requirements": 0,
+    "numberingComplete": false,
+    "missingNumbers": []
+  }
+}

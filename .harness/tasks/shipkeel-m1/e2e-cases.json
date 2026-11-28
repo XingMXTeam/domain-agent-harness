@@ -1,0 +1,47 @@
+[
+  {
+    "id": "E2E-1",
+    "category": "core",
+    "mapsTo": "REQ-6",
+    "blocking": true,
+    "severity": "critical",
+    "steps": ["Run `npm run smoke` from repo root after `npm run build`"],
+    "expect": ["CLI exits 0 for explicit qa domain, auto-routed Catalog -> qa, and invalid domain fallback -> qa", "stdout contains only final answer; logs go to stderr"]
+  },
+  {
+    "id": "E2E-2",
+    "category": "core",
+    "mapsTo": "REQ-2",
+    "blocking": true,
+    "severity": "critical",
+    "steps": ["Run `npm run list-domains` from repo root and `node dist/index.js --list-domains` inside `scaffolds/plan-execute`"],
+    "expect": ["Lists build, qa, and gop domains with exit code 0"]
+  },
+  {
+    "id": "E2E-3",
+    "category": "negative",
+    "mapsTo": "REQ-6",
+    "blocking": true,
+    "severity": "high",
+    "steps": ["Run invalid-domain catalog fallback scenario in `scripts/smoke-e2e.mjs`"],
+    "expect": ["Router fails closed to read-only domain `qa` and exits 0 without invoking write executors"]
+  },
+  {
+    "id": "E2E-4",
+    "category": "negative",
+    "mapsTo": "REQ-6",
+    "blocking": false,
+    "severity": "high",
+    "steps": ["Run Markdown relative link validator and CI security regex scan across repo"],
+    "expect": ["Zero broken links and zero matched internal/secret patterns"]
+  },
+  {
+    "id": "E2E-5",
+    "category": "boundary",
+    "mapsTo": "REQ-2",
+    "blocking": false,
+    "severity": "medium",
+    "steps": ["Run `npm test` directly inside `scaffolds/plan-execute/` as well as from repo root"],
+    "expect": ["All unit tests pass identically regardless of working directory"]
+  }
+]

@@ -1,0 +1,206 @@
+{
+  "version": 1,
+  "feature": "shipkeel-m1",
+  "layerWeights": true,
+  "policy": {
+    "minEssentialPerLayer": 1,
+    "minPitfallsPerLayer": 1,
+    "layerNA": {
+      "L3": "No web UI in M1; pure Node/TypeScript workspace restructure and Markdown playbook/contracts.",
+      "L4": "No interactive browser UI in M1; CLI and Markdown documentation only."
+    }
+  },
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "description": "根目录改名为 ShipKeel（根 package.json 设为 name: shipkeel, private: true, workspaces: [scaffolds/*]），并重写根 README.md 与 AGENTS.md（根目录只保留 C1–C11 通用契约与 ShipProof 协议块）。"
+    },
+    {
+      "id": "REQ-2",
+      "description": "将现有运行时（src/、test/、scripts/、knowledge/、tsconfig.json、entrypoint.sh、.env.example 与运行时文档）完整迁入 scaffolds/plan-execute/，作为 @shipkeel/plan-execute 子包（保留 bin: dah、yaml 唯一运行时依赖与 build/qa/gop 三域全部示例资产），并建立 scaffolds/plan-execute/AGENTS.md 承接局部约束。"
+    },
+    {
+      "id": "REQ-3",
+      "description": "在根目录建立纯 Markdown 的 playbook/：包含 L0–L4 五级范式决策树、可叠加模式积木、各范式内框架选型指南，以及 4 份引用真实代码证据的案例拆解（playbook/cases/visual-studio.md、atoms.md、campaign-build.md、finance.md）。"
+    },
+    {
+      "id": "REQ-4",
+      "description": "在根目录建立 contracts/：完整定义 C1–C11 通用契约的规则说明、反例与确定性检查方法。"
+    },
+    {
+      "id": "REQ-5",
+      "description": "更新 .github/workflows/ci.yml、.gitignore、harness.config.json、.harness/verify.json 与 .harness/standards.md，使根目录 workspace 命令、CI 资产校验、安全扫描与 fh verify / fh gate 在新目录结构下 100% 全绿。"
+    },
+    {
+      "id": "REQ-6",
+      "description": "全仓无断链、无旧根路径残留、无密钥或内网标识泄露，scaffolds/plan-execute 原有 typecheck / test / build / smoke / list-domains 全部离线通过。"
+    }
+  ],
+  "items": [
+    {
+      "id": "RB-1",
+      "requirement": "REQ-1",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "command",
+      "command": "node -e \"const p=JSON.parse(require('fs').readFileSync('package.json','utf8')); if(p.name!=='shipkeel'||p.private!==true||!Array.isArray(p.workspaces)||!p.workspaces.includes('scaffolds/*')) process.exit(1);\"",
+      "description": "Root package.json is named shipkeel, marked private: true, and declares workspaces scaffolds/*"
+    },
+    {
+      "id": "RB-2",
+      "requirement": "REQ-1",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "command",
+      "command": "grep -q 'ShipKeel' README.md && grep -q 'C11' AGENTS.md && grep -q 'frontend-harness:start' AGENTS.md",
+      "description": "Root README.md introduces ShipKeel and root AGENTS.md holds C1-C11 universal contracts and ShipProof protocol block"
+    },
+    {
+      "id": "RB-3",
+      "requirement": "REQ-2",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "command",
+      "command": "node -e \"const fs=require('fs'); const p=JSON.parse(fs.readFileSync('scaffolds/plan-execute/package.json','utf8')); if(p.name!=='@shipkeel/plan-execute'||p.bin?.dah!=='dist/index.js') process.exit(1); for(const f of ['scaffolds/plan-execute/AGENTS.md','scaffolds/plan-execute/README.md','scaffolds/plan-execute/tsconfig.json','scaffolds/plan-execute/src/index.ts','scaffolds/plan-execute/knowledge/README.md']) if(!fs.existsSync(f)) process.exit(1);\"",
+      "description": "scaffolds/plan-execute is a valid @shipkeel/plan-execute workspace with bin dah, AGENTS.md, runtime, and sample assets"
+    },
+    {
+      "id": "RB-4",
+      "requirement": "REQ-3",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "command",
+      "command": "node -e \"const fs=require('fs'); for(const f of ['playbook/README.md','playbook/patterns.md','playbook/frameworks.md','playbook/cases/visual-studio.md','playbook/cases/atoms.md','playbook/cases/campaign-build.md','playbook/cases/finance.md']) { if(!fs.existsSync(f)||fs.statSync(f).size<400) process.exit(1); } const readme=fs.readFileSync('playbook/README.md','utf8'); for(const l of ['L0','L1','L2','L3','L4']) if(!readme.includes(l)) process.exit(1);\"",
+      "description": "playbook/ contains L0-L4 decision tree, patterns, framework guide, and all 4 non-stub case breakdowns"
+    },
+    {
+      "id": "RB-5",
+      "requirement": "REQ-4",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "command",
+      "command": "node -e \"const fs=require('fs'); if(!fs.existsSync('contracts/README.md')) process.exit(1); const s=fs.readFileSync('contracts/universal-contracts.md','utf8'); for(let i=1;i<=11;i++) if(!s.includes('C'+i)) process.exit(1);\"",
+      "description": "contracts/ defines all universal contracts C1 through C11"
+    },
+    {
+      "id": "RB-6",
+      "requirement": "REQ-5",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "command",
+      "command": "grep -q 'scaffolds/plan-execute/dist/prompts/catalog.md' .github/workflows/ci.yml && grep -q 'scaffolds/plan-execute/dist/index.js' .github/workflows/ci.yml && fh doctor",
+      "description": "CI workflow checks migrated dist paths and fh doctor passes cleanly"
+    },
+    {
+      "id": "RB-7",
+      "requirement": "REQ-6",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "verify",
+      "check": "typecheck",
+      "description": "Workspace typecheck passes via fh verify"
+    },
+    {
+      "id": "RB-8",
+      "requirement": "REQ-6",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "verify",
+      "check": "unit",
+      "description": "All offline unit tests pass via fh verify"
+    },
+    {
+      "id": "RB-9",
+      "requirement": "REQ-6",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "verify",
+      "check": "build",
+      "description": "Build and domain asset copy succeed via fh verify"
+    },
+    {
+      "id": "RB-10",
+      "requirement": "REQ-6",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "verify",
+      "check": "smoke",
+      "description": "Offline E2E smoke test passes via fh verify"
+    },
+    {
+      "id": "RB-11",
+      "requirement": "REQ-6",
+      "layer": "L1",
+      "level": "essential",
+      "kind": "verify",
+      "check": "list-domains",
+      "description": "CLI --list-domains succeeds via fh verify"
+    },
+    {
+      "id": "RB-12",
+      "requirement": "REQ-2",
+      "layer": "L2",
+      "level": "essential",
+      "kind": "command",
+      "command": "cd scaffolds/plan-execute && npm test && node dist/index.js --list-domains",
+      "description": "Running tests and built CLI directly inside scaffolds/plan-execute succeeds"
+    },
+    {
+      "id": "RB-13",
+      "requirement": "REQ-2",
+      "layer": "L1",
+      "level": "pitfall",
+      "kind": "command",
+      "command": "node -e \"const fs=require('fs'); const root=JSON.parse(fs.readFileSync('package.json','utf8')); const sub=JSON.parse(fs.readFileSync('scaffolds/plan-execute/package.json','utf8')); if(Object.keys(root.dependencies||{}).length!==0) process.exit(1); const deps=Object.keys(sub.dependencies||{}); if(deps.length!==1||deps[0]!=='yaml') process.exit(1);\"",
+      "description": "RL-2: Root has zero runtime dependencies and scaffolds/plan-execute depends only on yaml"
+    },
+    {
+      "id": "RB-14",
+      "requirement": "REQ-6",
+      "layer": "L2",
+      "level": "pitfall",
+      "kind": "command",
+      "command": "node -e \"const fs=require('fs'),p=require('path'); const files=[]; function walk(d){for(const e of fs.readdirSync(d,{withFileTypes:true})){if(['node_modules','.git','dist','.harness','.agents'].includes(e.name)) continue; const f=p.join(d,e.name); if(e.isDirectory()) walk(f); else if(e.name.endsWith('.md')) files.push(f);}} walk('.'); const broken=[]; for(const f of files){const s=fs.readFileSync(f,'utf8').replace(/```[\\s\\S]*?```/g,''); for(const m of s.matchAll(/\\[[^\\]]+\\]\\(([^)]+)\\)/g)){const raw=m[1].split('#')[0].trim(); if(!raw||/^(https?:|mailto:|file:)/.test(raw)) continue; const target=p.resolve(p.dirname(f),raw); if(!fs.existsSync(target)) broken.push(f+' -> '+m[1]);}} if(broken.length){console.error(broken.join('\\n')); process.exit(1);}\"",
+      "description": "RL-3: Zero broken relative Markdown links across all repository documentation"
+    },
+    {
+      "id": "RB-15",
+      "requirement": "REQ-6",
+      "layer": "L2",
+      "level": "pitfall",
+      "kind": "command",
+      "command": "! grep -rnIE 'alibaba-inc|alibaba\\.com|anpm\\.|\\.aliyun\\.com|\\bGCP\\b|gcp-cc|@ali/|(sk-|ghp_|gho_|xox[baprs]-)[A-Za-z0-9_-]{16,}' README.md AGENTS.md playbook contracts scaffolds .harness/verify.json .harness/standards.md harness.config.json",
+      "description": "RL-3: Zero internal URLs, internal identifiers, or hardcoded secret prefixes"
+    },
+    {
+      "id": "RB-16",
+      "requirement": "REQ-3",
+      "layer": "L2",
+      "level": "important",
+      "kind": "judge",
+      "anchor": "REF-1",
+      "evidence": ".harness/tasks/shipkeel-m1/evaluation/judge-rb-16.json",
+      "description": "RL-4 & REF-1: playbook/ and contracts/ cite concrete code evidence from VisualStudio, Atoms, campaign-build, and finance with actionable checks (no generic hype)"
+    }
+  ],
+  "qualityWaivers": [
+    { "requirement": "REQ-1", "reason": "Pure package/doc rename and structure; verified deterministically by RB-1, RB-2, RB-14." },
+    { "requirement": "REQ-2", "reason": "Code migration without behavioral changes; verified deterministically by RB-3, RB-7..RB-13." },
+    { "requirement": "REQ-4", "reason": "Contract completeness covered by RB-5 and editorial quality covered alongside playbook in RB-16." },
+    { "requirement": "REQ-5", "reason": "CI and harness configuration verified deterministically by RB-6 and fh gate." },
+    { "requirement": "REQ-6", "reason": "End-to-end offline tests, link checker, and security scan are fully deterministic (RB-7..RB-15)." }
+  ],
+  "e2eCategories": {
+    "core": 2,
+    "negative": 2,
+    "boundary": 1,
+    "crossFeature": 0,
+    "persistence": 0,
+    "uiJourney": 0,
+    "na": {
+      "crossFeature": "Single restructure milestone; no cross-feature runtime interaction.",
+      "persistence": "No new runtime persistence layer added in M1.",
+      "uiJourney": "No web UI in M1; pure CLI workspace and Markdown documentation."
+    }
+  }
+}

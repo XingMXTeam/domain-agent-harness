@@ -1,0 +1,30 @@
+{
+  "$comment": "Checks that prove this project works. `fh verify` runs them and records exit code, HEAD sha and output in .harness/verify/last.json; judge evidence cites them by id (\"verify\": [\"unit\"]), and rubric items can run one with {\"kind\":\"verify\",\"check\":\"<id>\"}. Add the checks your project really has (e2e, visual, api).",
+  "checks": [
+    {
+      "id": "typecheck",
+      "command": "npm run typecheck",
+      "description": "TypeScript strict typecheck passes"
+    },
+    {
+      "id": "unit",
+      "command": "npm test",
+      "description": "offline node:test unit tests pass"
+    },
+    {
+      "id": "build",
+      "command": "npm run build",
+      "description": "TypeScript compilation and domain asset copy to dist/ succeed"
+    },
+    {
+      "id": "smoke",
+      "command": "npm run smoke",
+      "description": "offline end-to-end CLI smoke test passes (mock LLM + mock MCP)"
+    },
+    {
+      "id": "list-domains",
+      "command": "npm start -- --list-domains",
+      "description": "CLI domain listing succeeds"
+    }
+  ]
+}

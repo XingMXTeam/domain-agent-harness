@@ -87,3 +87,17 @@ npm test   # 必须 0 失败
 - 不要在 `mcp.json` 里写明文 Token（用 `{{ENV_VAR}}` 占位符）
 - 不要在 executor 里直接 `await` 平台接口而跳过 `gcpCall` 封装
 - 不要把 `dist/` 提交进 git
+
+<!-- frontend-harness:start -->
+## Feature work runs under frontend-harness
+
+- For any feature work, first run `fh` (= `fh next`) and do exactly the action it returns.
+- Start a feature with `fh new <name>` (or `fh new <name> --prd <file>`); it becomes the current feature.
+- When a step is finished, run `fh done` — it records the right thing for the current phase
+  (clarify, task, remediation, replan) and rejects work that has not earned it.
+- Never edit `.harness/tasks/*/state.json` by hand, and never declare a feature done yourself:
+  only a passing `fh eval` plus the delivery gate can set done.
+- "Tests pass" is evidence only as a recorded `fh verify` run; cite its ids, never describe a run.
+- After a feature is done, run `fh learn` and show the user any proposal; adopt only with their yes.
+- Ask the user only at the clarify confirmation and when the harness pauses.
+<!-- frontend-harness:end -->
