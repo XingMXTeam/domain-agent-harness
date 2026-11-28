@@ -5,10 +5,10 @@
       "command": "npm run typecheck",
       "status": "passed",
       "exitCode": 0,
-      "durationMs": 1013,
-      "at": 1795833855111,
-      "sha": "b7f7b93",
-      "tail": "> domain-agent-harness@0.1.0 typecheck\n> tsc -p tsconfig.json --noEmit",
+      "durationMs": 1080,
+      "at": 1795858375099,
+      "sha": "9581413",
+      "tail": "> npm run typecheck --workspaces --if-present\n\n\n> @shipkeel/plan-execute@0.1.0 typecheck\n> tsc -p tsconfig.json --noEmit",
       "log": ".harness/verify/typecheck.log"
     },
     "unit": {
@@ -16,10 +16,10 @@
       "command": "npm test",
       "status": "passed",
       "exitCode": 0,
-      "durationMs": 2179,
-      "at": 1795833857342,
-      "sha": "b7f7b93",
-      "tail": "ℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1020.698959",
+      "durationMs": 1036,
+      "at": 1795858376170,
+      "sha": "9581413",
+      "tail": "ℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 531.671291",
       "log": ".harness/verify/unit.log"
     },
     "build": {
@@ -27,10 +27,10 @@
       "command": "npm run build",
       "status": "passed",
       "exitCode": 0,
-      "durationMs": 901,
-      "at": 1795833858281,
-      "sha": "b7f7b93",
-      "tail": "> domain-agent-harness@0.1.0 build\n> tsc -p tsconfig.json && node scripts/copy-assets.mjs\n\n[copy-assets] domains → dist/domains（77 个文件）\n[copy-assets] prompts → dist/prompts（1 个文件）",
+      "durationMs": 1105,
+      "at": 1795858377309,
+      "sha": "9581413",
+      "tail": "> @shipkeel/plan-execute@0.1.0 build\n> tsc -p tsconfig.json && node scripts/copy-assets.mjs\n\n[copy-assets] domains → dist/domains（77 个文件）\n[copy-assets] prompts → dist/prompts（1 个文件）",
       "log": ".harness/verify/build.log"
     },
     "smoke": {
@@ -38,23 +38,23 @@
       "command": "npm run smoke",
       "status": "passed",
       "exitCode": 0,
-      "durationMs": 1843,
-      "at": 1795833860163,
-      "sha": "b7f7b93",
+      "durationMs": 1759,
+      "at": 1795858379110,
+      "sha": "9581413",
       "tail": "【场景 3】路由兜底：LLM 返回非法域时应退到只读域\n\n  ✅ CLI 退出码为 0 — 实际 0\n\n✅ 全部通过：11/11",
       "log": ".harness/verify/smoke.log"
     },
     "list-domains": {
       "id": "list-domains",
-      "command": "npm start -- --list-domains",
+      "command": "npm run list-domains",
       "status": "passed",
       "exitCode": 0,
-      "durationMs": 419,
-      "at": 1795833860620,
-      "sha": "b7f7b93",
-      "tail": "\nbuild    engine=session   skills=init,query,fix\nqa       engine=session   skills=query single=query\ngop      engine=pipeline  skills=-\n[env] node=v26.9.0 platform=darwin arch=arm64 cwd=/Users/felix/Documents/domain-agent-harness",
+      "durationMs": 534,
+      "at": 1795858379683,
+      "sha": "9581413",
+      "tail": "\nbuild    engine=session   skills=init,query,fix\nqa       engine=session   skills=query single=query\ngop      engine=pipeline  skills=-\n[env] node=v26.9.0 platform=darwin arch=arm64 cwd=/Users/felix/Documents/domain-agent-harness/scaffolds/plan-execute",
       "log": ".harness/verify/list-domains.log"
     }
   },
-  "updatedAt": 1795833860620
+  "updatedAt": 1795858379683
 }

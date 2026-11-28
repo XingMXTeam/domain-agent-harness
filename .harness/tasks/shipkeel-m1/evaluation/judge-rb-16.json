@@ -1,0 +1,29 @@
+{
+  "score": 1,
+  "note": "Confirmation pass independently verified playbook/ and contracts/ against REF-1, ANTI-1, and RL-4: L0-L4 decision tree, pattern building blocks, and framework trade-off tables use crisp control-flow criteria with zero marketing fluff; all 4 cases (VisualStudio, Atoms, campaign-build, finance) cite concrete source files/symbols (and in-repo scaffolds/plan-execute symbols + 124 unit test count were spot-checked against live code); contracts/ defines all C1-C11 with rules, counterexamples, and deterministic checks. All 5 fresh fh verify checks pass at HEAD 9581413.",
+  "artifacts": [
+    "playbook/README.md",
+    "playbook/patterns.md",
+    "playbook/frameworks.md",
+    "playbook/cases/visual-studio.md",
+    "playbook/cases/atoms.md",
+    "playbook/cases/campaign-build.md",
+    "playbook/cases/finance.md",
+    "contracts/README.md",
+    "contracts/universal-contracts.md",
+    ".harness/tasks/shipkeel-m1/evaluation/eval-confirm.md"
+  ],
+  "verify": [
+    "typecheck",
+    "unit",
+    "build",
+    "smoke",
+    "list-domains"
+  ],
+  "heuristics": [
+    "H-PR-1.1",
+    "H-PR-1.2",
+    "H-PR-2.1"
+  ],
+  "rubricRefinementSuggestions": []
+}

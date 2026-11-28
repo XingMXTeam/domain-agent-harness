@@ -1,0 +1,202 @@
+{
+  "at": 1795858380933,
+  "verdict": "pass",
+  "verdictReason": "score",
+  "score": 1,
+  "passScore": 0.9,
+  "layers": {
+    "L1": {
+      "score": 1,
+      "weight": 0.4
+    },
+    "L2": {
+      "score": 1,
+      "weight": 0.25
+    }
+  },
+  "vetoed": [],
+  "unverified": [],
+  "results": [
+    {
+      "id": "RB-1",
+      "requirement": "REQ-1",
+      "level": "essential",
+      "kind": "command",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "exit=0"
+    },
+    {
+      "id": "RB-2",
+      "requirement": "REQ-1",
+      "level": "essential",
+      "kind": "command",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "exit=0"
+    },
+    {
+      "id": "RB-3",
+      "requirement": "REQ-2",
+      "level": "essential",
+      "kind": "command",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "exit=0"
+    },
+    {
+      "id": "RB-4",
+      "requirement": "REQ-3",
+      "level": "essential",
+      "kind": "command",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "exit=0"
+    },
+    {
+      "id": "RB-5",
+      "requirement": "REQ-4",
+      "level": "essential",
+      "kind": "command",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "exit=0"
+    },
+    {
+      "id": "RB-6",
+      "requirement": "REQ-5",
+      "level": "essential",
+      "kind": "command",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "exit=0 ✅ git repo — HEAD 9581413 | ✅ .harness/verify.json — typecheck, unit, build, smoke, list-domains | ✅ .harness/standards.md present"
+    },
+    {
+      "id": "RB-7",
+      "requirement": "REQ-6",
+      "level": "essential",
+      "kind": "verify",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "verify typecheck: `npm run typecheck` exit=0 > @shipkeel/plan-execute@0.1.0 typecheck | > tsc -p tsconfig.json --noEmit"
+    },
+    {
+      "id": "RB-8",
+      "requirement": "REQ-6",
+      "level": "essential",
+      "kind": "verify",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "verify unit: `npm test` exit=0 ℹ todo 0 | ℹ duration_ms 531.671291"
+    },
+    {
+      "id": "RB-9",
+      "requirement": "REQ-6",
+      "level": "essential",
+      "kind": "verify",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "verify build: `npm run build` exit=0 [copy-assets] domains → dist/domains（77 个文件） | [copy-assets] prompts → dist/prompts（1 个文件）"
+    },
+    {
+      "id": "RB-10",
+      "requirement": "REQ-6",
+      "level": "essential",
+      "kind": "verify",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "verify smoke: `npm run smoke` exit=0  | ✅ 全部通过：11/11"
+    },
+    {
+      "id": "RB-11",
+      "requirement": "REQ-6",
+      "level": "essential",
+      "kind": "verify",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "verify list-domains: `npm run list-domains` exit=0 gop      engine=pipeline  skills=- | [env] node=v26.9.0 platform=darwin arch=arm64 cwd=/Users/felix/Documents/domain-agent-harness/scaffolds/plan-execute"
+    },
+    {
+      "id": "RB-12",
+      "requirement": "REQ-2",
+      "level": "essential",
+      "kind": "command",
+      "verify": "static",
+      "layer": "L2",
+      "status": "pass",
+      "score": 1,
+      "detail": "exit=0 qa       engine=session   skills=query single=query | gop      engine=pipeline  skills=- | [env] node=v26.9.0 platform=darwin arch=arm64 cwd=/Users/felix/Documents/domain-agent-harness/scaffolds/plan-execute"
+    },
+    {
+      "id": "RB-13",
+      "requirement": "REQ-2",
+      "level": "pitfall",
+      "kind": "command",
+      "verify": "static",
+      "layer": "L1",
+      "status": "pass",
+      "score": 1,
+      "detail": "exit=0"
+    },
+    {
+      "id": "RB-14",
+      "requirement": "REQ-6",
+      "level": "pitfall",
+      "kind": "command",
+      "verify": "static",
+      "layer": "L2",
+      "status": "pass",
+      "score": 1,
+      "detail": "exit=0"
+    },
+    {
+      "id": "RB-15",
+      "requirement": "REQ-6",
+      "level": "pitfall",
+      "kind": "command",
+      "verify": "static",
+      "layer": "L2",
+      "status": "pass",
+      "score": 1,
+      "detail": "exit=0"
+    },
+    {
+      "id": "RB-16",
+      "requirement": "REQ-3",
+      "level": "important",
+      "kind": "judge",
+      "verify": "static",
+      "layer": "L2",
+      "status": "pass",
+      "score": 1,
+      "detail": "judge: Confirmation pass independently verified playbook/ and contracts/ against REF-1, ANTI-1, and RL-4: L0-L4 decision tree, pattern building blocks, and framework trade-off tables use crisp control-flow criteria with zero marketing fluff; all 4 cases (VisualStudio, Atoms, campaign-build, finance)"
+    }
+  ],
+  "refinementSuggestions": {
+    "added": [],
+    "pending": [],
+    "invalid": []
+  }
+}

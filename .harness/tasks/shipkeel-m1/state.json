@@ -2,14 +2,14 @@
   "version": 2,
   "feature": "shipkeel-m1",
   "title": "ShipKeel M1: Repo Restructure, Playbook & Contracts",
-  "phase": "implement",
+  "phase": "done",
   "createdAt": 1795853077807,
-  "updatedAt": 1795853484385,
+  "updatedAt": 1795858386455,
   "macroCycle": {
-    "current": 1,
+    "current": 2,
     "max": 5
   },
-  "consecutivePasses": 0,
+  "consecutivePasses": 2,
   "clarificationComplete": true,
   "tasks": [
     {
@@ -40,9 +40,9 @@
       "requirements": [
         "REQ-3"
       ],
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
-      "commitSha": null
+      "commitSha": "ef739fdb5464"
     },
     {
       "id": "TASK-4",
@@ -50,9 +50,9 @@
       "requirements": [
         "REQ-1"
       ],
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
-      "commitSha": null
+      "commitSha": "9fbad95f282e"
     },
     {
       "id": "TASK-5",
@@ -61,9 +61,9 @@
         "REQ-5",
         "REQ-6"
       ],
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
-      "commitSha": null
+      "commitSha": "45010dbc4fd5"
     }
   ],
   "history": [
@@ -90,11 +90,101 @@
       "event": "task-done",
       "task": "TASK-2",
       "commitSha": "91d76a3dfabc"
+    },
+    {
+      "at": 1795853592051,
+      "event": "task-done",
+      "task": "TASK-3",
+      "commitSha": "ef739fdb5464"
+    },
+    {
+      "at": 1795853645223,
+      "event": "task-done",
+      "task": "TASK-4",
+      "commitSha": "9fbad95f282e"
+    },
+    {
+      "at": 1795853711637,
+      "event": "task-done",
+      "task": "TASK-5",
+      "commitSha": "45010dbc4fd5"
+    },
+    {
+      "at": 1795858060851,
+      "event": "rubric-refinements-recorded",
+      "ids": [
+        "RS-1"
+      ]
+    },
+    {
+      "at": 1795858060854,
+      "event": "evaluation-failed",
+      "score": 1,
+      "vetoed": [
+        {
+          "id": "RB-14",
+          "reason": "pitfall triggered: exit=1     at node:internal/main/eval_string:71:3 |  | Node.js v26.9.0"
+        }
+      ],
+      "nextMacroCycle": 2
+    },
+    {
+      "at": 1795858120346,
+      "event": "replanned",
+      "accepted": [
+        "RS-1"
+      ],
+      "rejected": [],
+      "newTasks": []
+    },
+    {
+      "at": 1795858120587,
+      "event": "remediation-fixed",
+      "items": [
+        "RB-14"
+      ],
+      "commitSha": "95814138eb85"
+    },
+    {
+      "at": 1795858251336,
+      "event": "evaluation-passed",
+      "score": 1,
+      "consecutivePasses": 1,
+      "phaseAtEval": "implement"
+    },
+    {
+      "at": 1795858386455,
+      "event": "evaluation-passed",
+      "score": 1,
+      "consecutivePasses": 2,
+      "phaseAtEval": "verify"
+    },
+    {
+      "at": 1795858386455,
+      "event": "done",
+      "score": 1
     }
   ],
-  "lastEvaluation": null,
+  "lastEvaluation": {
+    "at": 1795858380933,
+    "verdict": "pass",
+    "score": 1,
+    "vetoed": []
+  },
   "lastReview": null,
-  "lastFailure": null,
+  "lastFailure": {
+    "at": 1795858060851,
+    "kind": "evaluation",
+    "vetoed": [
+      {
+        "id": "RB-14",
+        "reason": "pitfall triggered: exit=1     at node:internal/main/eval_string:71:3 |  | Node.js v26.9.0"
+      }
+    ],
+    "openItems": [
+      "RB-14"
+    ]
+  },
   "prd": {
     "source": "imported",
     "from": "/Users/felix/.gemini/antigravity/brain/49b3713e-f47a-4660-bf91-eb4b441d10e8/shipkeel-decisions.md",
@@ -122,5 +212,25 @@
     "RB-15": "pitfall",
     "RB-16": "important"
   },
-  "rubricHash": "272d7c52a1022835"
+  "rubricHash": "a563b54364a44683",
+  "pendingRefinements": [],
+  "refinementLog": [
+    {
+      "id": "RS-1",
+      "type": "refine",
+      "item": "RB-16",
+      "problem": "RB-16 relies solely on manual reading to confirm that in-repo symbol citations in playbook/ and contracts/ actually match scaffolds/plan-execute/src/.",
+      "suggestion": "Keep RB-16 for editorial quality against REF-1/ANTI-1, and consider adding a lightweight deterministic check in future milestones that verifies cited in-repo paths/symbols exist.",
+      "layer": null,
+      "level": null,
+      "source": ".harness/tasks/shipkeel-m1/evaluation/judge-rb-16.json",
+      "cycle": 1,
+      "at": 1795858060851,
+      "decision": "accepted",
+      "note": "Keep RB-16 for editorial quality against REF-1/ANTI-1 and fixed RB-14 shell quoting so relative Markdown path verification runs deterministically; in-repo symbol verification will be expanded as M2/M3 scaffolds land.",
+      "decidedAt": 1795858120346
+    }
+  ],
+  "remediationFixedAt": null,
+  "remediation": []
 }
