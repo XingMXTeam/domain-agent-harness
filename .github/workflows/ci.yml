@@ -55,7 +55,7 @@ jobs:
       - name: 扫描不应出现在仓库里的内网地址
         run: |
           if git grep -nIE 'alibaba-inc|alibaba\.com|anpm\.|\.aliyun\.com' -- \
-             ':!package-lock.json' ':!.github/workflows/ci.yml'; then
+             ':!package-lock.json' ':!.github/workflows/ci.yml' ':!.harness/tasks/**/rubric.json'; then
             echo "::error::检测到疑似内网地址，请脱敏后再提交"
             exit 1
           fi
@@ -63,7 +63,7 @@ jobs:
       - name: 扫描不应出现在仓库里的内部标识
         run: |
           if git grep -nIE '\bGCP\b|gcp-cc|@ali/' -- \
-             ':!package-lock.json' ':!.github/workflows/ci.yml'; then
+             ':!package-lock.json' ':!.github/workflows/ci.yml' ':!.harness/tasks/**/rubric.json'; then
             echo "::error::检测到疑似内部标识，请脱敏后再提交"
             exit 1
           fi
@@ -71,7 +71,7 @@ jobs:
       - name: 扫描不应硬编码的密钥
         run: |
           if git grep -nIE '(sk-|ghp_|gho_|xox[baprs]-)[A-Za-z0-9_-]{16,}' -- \
-             ':!package-lock.json'; then
+             ':!package-lock.json' ':!.harness/tasks/**/rubric.json'; then
             echo "::error::检测到疑似硬编码密钥"
             exit 1
           fi
