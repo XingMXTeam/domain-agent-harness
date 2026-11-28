@@ -1,333 +1,96 @@
-# domain-agent-harness
+# ShipKeel
 
-> 多域 Agent Harness —— 统一域路由（Catalog）+ 双执行引擎（session / pipeline）
+> **先定龙骨（ShipKeel），再验真出海（ShipProof）。**
 >
-> **模型负责决策，代码负责并发执行。**
-
-一个把「自然语言需求」变成「可审计、可复现的批量执行」的开源框架。
+> 做任何 Agent 之前先定下的工程母版：**五级范式选型决策树 + 与语言无关的 11 条通用契约（C1–C11）+ 按范式抽取的起步脚手架**。
 
 ---
 
 ## 这是什么
 
-大多数 Agent 项目把一切都塞进一个巨大的 Prompt：领域知识、工具清单、业务规则、输出格式全揉在一起。模型一换、工具一多，行为立刻漂移。
+市面上不缺编排框架，缺的是「面对一个新业务，怎么先判断是否该做成 Agent、该选哪一级控制流、以及如何第一天就带上生产纪律和离线测试」。
 
-`domain-agent-harness` 换了个思路：
-
-| 关注点 | 交给谁 | 为什么 |
-|---|---|---|
-| 判断用户意图属于哪个域 | **Catalog**（一次轻量 LLM 调用） | 域之间共享一个入口，路由后可分派到不同引擎 |
-| 域内该走哪个 skill | **brain.md**（一次轻量 LLM 调用） | 域内再分一次，避免单域 Prompt 膨胀 |
-| 产出结构化计划 | **模型 + JSON Schema** | 计划与执行解耦，产出可校验、可 diff |
-| 真正调用平台接口 | **代码（并发执行器）** | 模型不直接写接口，减少幻觉、重试与幂等可控 |
-| 事后校验 | **Review Agent（只读）** | 与执行解耦，校验不复用执行路径 |
-
-### 性能
-
-32 个页面的搭建任务：
-
-| 方案 | 耗时 |
-|---|---|
-| 模型逐一执行 | ~60-120 min |
-| 三阶段（模型规划 + 代码并发 + 模型审查） | **~5-7 min** |
-
-一句话：**LLM 只出计划，代码只做执行**。
+**ShipKeel** 与 [**ShipProof**](https://github.com/XingMXTeam/ShipProof) 组成完整闭环：
+- **设计期（ShipKeel）**：用决策树选范式 → 对照通用契约 C1–C11 定边界 → 从对应范式拷贝脚手架到独立业务仓库起步（技术栈按场景自选，不强制共享运行时）。
+- **交付期（ShipProof）**：用确定性验证门禁、角色隔离与独立验真，确保新 Agent 仓库守住契约下限。
 
 ---
 
-## 核心特性
+## 一眼看懂：五级范式与真实案例
 
-- **双引擎并存**
-  - `session` —— 命令式：单次 LLM 会话 + 域内 skill 路由（适合「查一查」「修一修」）
-  - `pipeline` —— 声明式：YAML 定义的多 Agent 流水线，步骤间用 JSON Schema 契约约束（适合「投放」这类多阶段流程）
-- **统一域路由（Catalog）**
-  - 一个 `catalog.md` 描述所有域，路由失败自动兜底到只读域（查询比创建安全）
-- **零重型依赖**
-  - 运行时只依赖 `yaml`；MCP 客户端、LLM 客户端、JSON Schema 校验全部自实现，可离线审计
-- **LLM Provider 可切换**
-  - Anthropic / OpenAI 兼容端点 / DashScope 兼容模式，同一套抽象
-- **MCP 原生**
-  - Streamable HTTP 传输（`stdio` 配置项已预留，客户端尚未实现）；工具名统一 `mcp__<server>__<tool>`
-  - 失败自动重试 + 会话重建
-- **并发执行**
-  - build 执行器分层并发，单点失败不扩散（分层内暂未限流）；pipeline 的 foreach 用 `parallel` 控制并发上限
-- **三阶段模型**
-  - Plan（模型）→ Execute（代码并发）→ Review（模型只读审查）
-- **知识库驱动规划**
-  - 业务知识放在 Markdown 知识库（L0 总览 → L1 活动定义 → L2 页面知识），模型通过只读 MCP 按目录导航，楼层表字段直接决定计划
-  - 规划阶段用 `spec.md` frontmatter 限定只读工具白名单与最大轮数
-- **可审计**
-  - 每次运行落盘 `trace.jsonl` 与会话记录，stderr 是日志、stdout 是结构化进度
+判断原点只有两个问题：**下一步是代码决定还是模型决定？进程崩了要不要跨时间续跑？**
+
+| 级别 | 范式 | 谁决定下一步 | 真实案例 | 起步脚手架 |
+|---|---|---|---|---|
+| **L0** | 增强型 LLM 调用 | 代码（单次生成） | [VisualStudio](playbook/cases/visual-studio.md)（不是 Agent，也不该做成 Agent） | 文档 + 极简示例 |
+| **L1** | 固定流水线 | 代码 / YAML | [Atoms](playbook/cases/atoms.md) · [gop 投放](playbook/cases/campaign-build.md) | `scaffolds/generate-verify-repair/`（M2）· [scaffolds/plan-execute/](scaffolds/plan-execute/README.md) |
+| **L2** | 模型出计划 → 代码执行 → 代码验收 | 模型规划一次，代码并发执行 | [build 活动搭建](playbook/cases/campaign-build.md) | [scaffolds/plan-execute/](scaffolds/plan-execute/README.md) |
+| **L3** | 持久状态图 + 人工审批 | 图的条件边 + Checkpoint | [finance 财报解析](playbook/cases/finance.md) · 未来 BD Agent | `scaffolds/durable-graph/`（M3） |
+| **L4** | 自主工具循环 | 模型逐步观察决策 | 未来浏览器手操 / CUA Agent | 暂缓（待真实项目抽取） |
+
+详见 [**选型决策树（playbook/README.md）**](playbook/README.md)、[**模式积木与串联判据**](playbook/patterns.md) 与 [**框架与 SDK 选型**](playbook/frameworks.md)。
 
 ---
 
-## 编排选型口诀
+## 11 条通用契约（C1–C11）
 
-> **流程常被非程序员调、要审计 → YAML 声明式；有环、长时、要续跑 → 图编排（LangGraph 式）；想完全掌控、团队工程力强 → 纯代码薄 harness。三者不是三选一，是按确定性分层共存。**
+无论选哪一级范式、用 TS 还是 Python，进入生产必须对齐同一份底线（完整细则与确定性检查见 [**contracts/universal-contracts.md**](contracts/universal-contracts.md)）：
 
-每个节点 / 阶段动手前先问一句：**这一步的动作能写死吗？**
-
-| 情形 | 选型 | 本仓对应 |
-|---|---|---|
-| 步骤能提前画成流程图、契约清晰、流程常被业务侧调整 | YAML 声明式流水线（流程即数据，可 diff、可审计） | `pipeline` 引擎（gop 域） |
-| 流程含返工环、运行时才知道走哪条路、需要断点续跑与状态恢复 | 图编排（代码画图 + 条件边 + checkpoint） | 本仓暂未内置；长时任务可外接 LangGraph / Temporal 一类运行时 |
-| 步骤画不出来、必须让模型临场决策，但执行要批量、要幂等 | 模型出计划（JSON Schema 契约）+ 代码并发执行 | `session` 引擎（build / qa 域） |
-| 流程简单，或团队要对 prompt / 上下文 / 控制流完全掌控 | 纯代码薄 harness（厂商 SDK + 一个循环） | 本仓 runtime 即按此原则自研：零重型依赖 |
-
-配套的四条通用纪律（与引擎无关，任何一层都适用）：
-
-1. **交接物强制结构化**：步骤之间只传过 Schema 校验的数据，不传自然语言摘要 —— 串联失真在交界处被抓住，不累积。
-2. **状态外置、传键不传数**：真值落盘（计划、产物、状态文件），下游按 key 取数；摘要只是索引，不是真值。
-3. **校验不经模型的手**：验收 pass / fail 由代码判定，模型只能解释失败原因，不能改判。
-4. **单线程写、只读可并行**：写操作保持单线程单 Agent；额外 Agent 只贡献智能（审查、检索），不贡献动作。
-
-串联判据（引擎内部怎么传、怎么分工）：**纪律没得选，拓扑看耦合 — 写耦合就单线程、并行只给代码；只读独立才发散，合并只合情报不合动作；值怕变形传键，不怕传值。**
-
-详见 [`docs/agent-architecture-guide.md`](docs/agent-architecture-guide.md)：行业共识（12-Factor Agents、Cognition 单线程原则、框架收敛与持久执行、工具上下文经济学）与本仓的对应关系、串联与协作判据的展开、文末的本仓最佳实践清单，以及按此方法新增域的完整示例（finance 财报解析域）。
-
----
-
-## 快速开始
-
-```bash
-git clone https://github.com/XingMXTeam/domain-agent-harness.git
-cd domain-agent-harness
-npm install
-cp .env.example .env      # 填入 LLM_PROVIDER 与对应的 API Key
-```
-
-### 本地一键演示（无需 Key、无需外部服务）
-
-```bash
-npm run demo
-npm run demo -- "创建 618 大促，巴西站，32 个页面"
-FAIL_RATE=0.15 npm run demo            # 写接口随机失败，看 Review 怎么标注
-DEMO_REAL_LLM=1 npm run demo           # 模型走 .env 里的真 Provider，只把平台换成本地
-```
-
-demo 会起三个本地服务：
-
-- `scripts/knowledge-mcp.mjs` —— 知识库 MCP：把 `knowledge/` 目录暴露成 `kb_list` / `kb_read` / `kb_search`，规划师按 L0 → L1 → L2 读完再出计划
-- `scripts/local/mock-platform-mcp.mjs` —— 假平台 MCP（Streamable HTTP，内存存储）：子场景 / 页面 / 模块 / 排期 / 点位 / 预发布，`GET /state` 看数据与最大并发
-- `scripts/local/mock-llm.mjs` —— 剧本模型（Anthropic Messages 兼容）：按阶段扮演路由器、规划师、审查员
-
-也可以分别启动（`npm run kb:mcp`、`npm run local:mcp`、`npm run local:llm`），再用 `KM_MCP_URL` / `PLATFORM_MCP_URL` / `ANTHROPIC_BASE_URL` 指过去。
-想用本地开源模型：`LLM_PROVIDER=openai`，`OPENAI_BASE_URL` 指向 Ollama / vLLM 的 OpenAI 兼容地址。
-
-### 自动路由（Catalog）
-
-```bash
-npm start -- "查一下 618 大促的页面结构"
-```
-
-### 指定域
-
-```bash
-npm start -- --domain=build "创建 618 大促，巴西站，首屏放 Banner"
-npm start -- --domain=qa   "这个楼层的选品规则是什么"
-npm start -- --domain=gop  "给 618 大促投放样式包和排期"
-```
-
-### 查看可用域
-
-```bash
-npm start -- --list-domains
-```
-
-### 沙箱入口
-
-容器 / CI 里用 `entrypoint.sh`：以 root 启动时自动降权到普通用户再执行。
-
-```bash
-bash entrypoint.sh "创建 618 大促"
-```
+- **C1**：确定性的值（时间、版本、ID、金额、公式结果）由代码推导，模型不产出
+- **C2**：工具白名单在提示侧与代码侧双重约束
+- **C3**：计划与执行分离（计划过 JSON Schema，执行是不含 LLM 调用的纯代码）
+- **C4**：验收 pass / fail 由确定性代码判定，模型只解释，不能改判
+- **C5**：失败往安全侧兜底；只读单元显式抛错拒绝写入
+- **C6**：真值只有一条写入路径；额外 Agent 只献智不动手（只读输出结构化提议）
+- **C7**：修复与返工循环必有轮次上限与无进展早停
+- **C8**：模型接入支持 `real / mock / replay` 三模式；测试全部离线
+- **C9**：运行事件与产物外置落盘；大文本/精确数值/二进制传键不传值
+- **C10**：不可逆写操作前可插入人工审批点（L3+ 必选）
+- **C11**：严禁硬编码密钥、内网地址与内部标识
 
 ---
 
 ## 目录结构
 
-```
-knowledge/                       示例知识库（L0 / L1 / L2，见 docs/knowledge-base.md）
-scripts/knowledge-mcp.mjs        知识库 MCP 服务
-src/
-├── index.ts                     CLI 入口
-├── orchestrator.ts              编排器：Catalog 路由 + 引擎分派 + 域内 skill 路由
-├── types.ts                     全局类型契约
-├── prompts/
-│   └── catalog.md               域路由 System Prompt
-├── runtime/
-│   ├── mcp-client.ts            MCP 客户端池（重试 / 会话重建）
-│   ├── sdk-client.ts            会话执行器（模型 ↔ 工具闭环）
-│   ├── llm.ts                   Provider 无关的 LLM 客户端
-│   ├── https-client.ts          POST + SSE 流式 POST
-│   ├── run-context.ts           运行上下文 / MCP 配置生成
-│   ├── prompt-file.ts           提示词 frontmatter（allowedTools / maxTurns）
-│   ├── pipeline-engine.ts       声明式流水线引擎（when / retries / foreach + parallel / 子流水线）
-│   ├── pipeline-state.ts        state.json 与步骤产物落盘
-│   ├── expr.ts                  ${a.b} 表达式与 when 真值规则
-│   ├── schema-resolver.ts       轻量 JSON Schema 校验
-│   ├── tool-runner.ts           代码侧工具执行器
-│   ├── parallel.ts              并发执行器
-│   ├── keepalive.ts             长任务心跳
-│   ├── reporter.ts              进度上报
-│   ├── trace.ts                 链路追踪
-│   ├── log.ts                   日志
-│   └── paths.ts                 路径解析
-└── domains/
-    ├── build/                   搭建域（session 引擎）
-    │   ├── brain.md             域内意图路由
-    │   ├── types.ts             plan.json 类型
-    │   ├── helpers.ts           gcpCall / 时间格式化 / plan 预处理
-    │   ├── resolve-time.ts      countryTimeRef → 实际时间
-    │   ├── setup.ts             Layer 1：建子场景 → 推导时间轴 → 建模块池
-    │   ├── data-prep.ts         Layer 2A：选品 / 外层任务（并发）
-    │   ├── page-build.ts        Layer 2B：建页面 / 挂模块（并发）
-    │   ├── point-material.ts    Layer 2.5：点位素材
-    │   ├── schedules.ts         Layer 3：排期写入 + 预发布
-    │   ├── executor.ts          分层编排 + 选品兜底
-    │   ├── skills/              init / query / fix 三个 skill
-    │   └── schemas/             plan.schema.json
-    ├── qa/                      答疑域（session 引擎，单 skill，只读）
-    └── gop/                     投放域（pipeline 引擎）
-        ├── agents/              5 个 Agent 提示词
-        ├── pipelines/           2 条 YAML 流水线
-        └── schemas/             5 个 JSON Schema
+```text
+shipkeel/
+├── README.md                  # 总入口
+├── AGENTS.md                  # 通用契约 C1–C11 + ShipProof 协议
+├── playbook/                  # 五级范式决策树、模式积木、框架选型与 4 份真实案例拆解
+│   ├── README.md
+│   ├── patterns.md
+│   ├── frameworks.md
+│   └── cases/                 # visual-studio / atoms / campaign-build / finance
+├── contracts/                 # 通用契约 C1–C11 索引与确定性检查细则
+├── scaffolds/
+│   └── plan-execute/          # @shipkeel/plan-execute（L2 + L1 参考实现，单依赖 yaml）
+├── .harness/ & .agents/       # ShipProof 交付验真体系与 27 份 Skills
+└── package.json               # npm workspaces 根配置
 ```
 
 ---
 
-## 两种执行引擎
-
-### session 引擎（命令式）
-
-```
-用户输入
-   ↓
-Catalog 路由 → build
-   ↓
-brain.md 路由 → init
-   ↓
-init/spec.md 产出 plan.json ──schema 校验──┐
-                                            ↓
-                                   executor 分层执行（代码并发）
-                                            ↓
-                                   init/review.md 只读审查
-```
-
-即 **Plan（模型）→ Execute（代码并发）→ Review（模型只读审查）** 三阶段。
-
-适合「一次决策 + 一次批量写入」的场景。审查阶段与执行解耦：它只看结果，不复用执行路径，因此不会因为执行失败而失效。
-
-审查分两步：先由代码按 `knowledge/shared/review-rules.md` 只读核对平台状态（验收，pass / fail 由代码判定），再由模型解释失败原因、给修复建议。验收没通过，模型不能改判为通过。
-
-### pipeline 引擎（声明式）
-
-```yaml
-steps:
-  - id: plan
-    agent: agents/deployment-planner.md      # frontmatter 里声明工具白名单和 outputSchema
-    output: deployment_plan
-    retries: 1
-  - id: floors
-    foreach: ${deployment_plan.floors}
-    parallel: 4
-    pipeline: pipelines/floor-deployment.pipeline.yaml
-    input: { floor: "${item}", activity: "${deployment_plan.activity}" }
-  - id: review
-    agent: agents/deployment-reviewer.md
-    when: ${floors}
-    input: { plan: "${deployment_plan}", floors: "${floors}" }
-```
-
-步骤之间用 `${a.b}` 表达式取值，支持 `when` 条件、`retries` 重试、`foreach` + `parallel` 并发、嵌套子流水线；每步产物过 JSON Schema 校验，校验不过就重试或中断，不会把脏数据带到下游。每次运行写 `state.json`（每步状态、重试次数、错误）和 `artifacts/<stepId>.json`。详见 [`docs/pipeline.md`](docs/pipeline.md)。
-
-适合「多阶段、每阶段有明确契约」的场景。
-
----
-
-## 关键设计约束
-
-这些约束是整个框架的骨架，改动前请先读 [`docs/architecture.md`](docs/architecture.md)。
-
-1. **模型不产出时间值**
-   `phases` / `offlineTime` / `expireTime` / 素材起止时间全部由 executor 从 `countryTimeRef` 推导。模型给出引用即可。
-2. **版本由代码匹配**
-   `floorSetting.template` 只需给 `name`，`version` 由 executor 从模块池自动匹配。模型不猜版本号。
-3. **工具白名单双重约束**
-   System Prompt 里的工具表 + 代码侧的 `allowedTools`，两边同时生效。
-4. **缺失项由代码补齐**
-   缺失的 locale / theme 排期由 executor 自动注入（空 `contentData`），模型不编造。
-5. **路由失败往安全侧兜底**
-   Catalog 路由失败或返回非法值时兜底到只读域 `qa`。
-6. **计划与执行分离**
-   计划是纯数据（可校验、可 diff、可人工审阅）；执行是纯代码（可重试、可幂等、可并发）。
-
----
-
-## 配置
-
-见 [`.env.example`](.env.example) 与 [`docs/configuration.md`](docs/configuration.md)。
-
-| 变量 | 说明 |
-|---|---|
-| `LLM_PROVIDER` | `anthropic` / `openai` / `dashscope` |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `DASHSCOPE_API_KEY` | 对应 Provider 的密钥 |
-| `LLM_TIMEOUT_MS` / `LLM_MAX_TOKENS` / `LLM_TEMPERATURE` | 通用调参 |
-| `DAH_DOMAIN` | 强制指定域，等价于 `--domain=` |
-| `DAH_RUNS_ROOT` | 运行产物根目录，默认 `./.runs` |
-| `DAH_LOG_LEVEL` | `debug` / `info` / `warn` / `error` |
-| `USER_INPUT` | 沙箱模式下由外部注入的用户输入 |
-
-MCP 服务的 Token 一律通过 `{{ENV_VAR}}` 占位符注入，不硬编码在源码或配置文件里。
-
----
-
-## 接入自己的平台
-
-1. 改 `src/domains/<域>/mcp.json`，把 URL 指向你自己的 MCP 服务
-2. 改 `src/orchestrator.ts` 的 `QUERY_ALLOWED_TOOLS`，按你的工具清单逐条列出
-3. 改 `src/prompts/catalog.md`，声明你的域与路由规则
-4. 改 `src/domains/build/helpers.ts` 的 `PLATFORM_SERVER`，对齐 MCP 服务名
-5. 按需改 `src/domains/build/*.ts` 里的工具名与分层逻辑
-
-新增一个域：在 `src/domains/` 下建目录 → 补 `mcp.json` → 在 `DOMAIN_META` / `DOMAIN_CONFIGS` 注册 → 写 `brain.md` 与 `skills/*/spec.md`（session 引擎）或 `pipelines/*.yaml`（pipeline 引擎）。
-
----
-
-## 开发
+## 快速验证（全部离线，无需 API Key）
 
 ```bash
-npm run typecheck   # 类型检查
-npm test            # 单元测试（node:test，无网络依赖）
-npm run build       # 编译 + 复制域资产到 dist/
+npm install
+npm run verify          # typecheck + 124 条离线单测 + 构建 + 离线 E2E 冒烟 + 域列表
+npm run demo            # 启动本地 3 个 mock 服务，一键演示 L2 三阶段搭建闭环
 ```
 
-测试全部离线运行，不依赖任何外部服务或 API Key。
+---
+
+## 演进路线
+
+- **M1（当前）**：ShipKeel 骨架重构、`playbook/` 决策树与 4 份案例拆解、`contracts/` C1–C11、`scaffolds/plan-execute/` workspace 迁移与全链路验真。
+- **M2**：从 `Atoms` 抽取无界面 L1「生成-验证-修复」脚手架（`scaffolds/generate-verify-repair/`）。
+- **M3**：从 `finance` 抽取并补齐 Checkpointer、Interrupt、口径数据化与三模式离线测试的 L3 脚手架（`scaffolds/durable-graph/`）。
+- **M4**：将 C1–C11 导出为 ShipProof 的 `templates/standards/agent.md` 规范包。
 
 ---
 
-## 文档
+## 贡献与协议
 
-| 文档 | 内容 |
-|---|---|
-| [`docs/architecture.md`](docs/architecture.md) | 三阶段模型、设计理念、性能对比、扩展点 |
-| [`docs/plan-json-schema.md`](docs/plan-json-schema.md) | plan.json 结构规范与 Executor 分层 |
-| [`docs/pipeline.md`](docs/pipeline.md) | YAML 流水线规范与 Schema 契约 |
-| [`docs/knowledge-base.md`](docs/knowledge-base.md) | 知识库结构、楼层表字段、知识库 MCP、规划阶段工具约束 |
-| [`docs/configuration.md`](docs/configuration.md) | 全部环境变量与 MCP 配置 |
-| [`docs/domains.md`](docs/domains.md) | 三个内置域的职责边界与工具清单 |
-
----
-
-## 贡献
-
-欢迎 PR。详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-## License
-
-[Apache-2.0](LICENSE)
-
-## 致谢
-
-本项目脱胎自一个内部多域 Agent Harness 的实战沉淀，开源版本在保留完整设计的同时，
-把内网地址、内部标识与平台专有名词全部替换为通用可配置项。
+- 贡献说明见 [CONTRIBUTING.md](CONTRIBUTING.md)
+- 安全策略见 [SECURITY.md](SECURITY.md)
+- License: [Apache-2.0](LICENSE)

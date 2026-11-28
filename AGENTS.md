@@ -1,92 +1,53 @@
-# AGENTS.md
+# AGENTS.md — ShipKeel
 
 > 面向 AI 编码助手的仓库工作说明。人类贡献者请看 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 这是什么
 
-多域 Agent Harness。统一域路由（Catalog）+ 双执行引擎（session / pipeline）。
-**模型只出计划，代码负责并发执行。**
+**ShipKeel**：做任何 Agent 之前先定下的龙骨 —— 五级范式决策树（`playbook/`）+ 与语言无关的通用契约（`contracts/`）+ 按范式分的起步脚手架（`scaffolds/*`）。
 
-## 常用命令
+各脚手架的局部约束与依赖预算见各自目录下的 `AGENTS.md`（例如 [scaffolds/plan-execute/AGENTS.md](scaffolds/plan-execute/AGENTS.md)）。
+
+## 常用命令（根目录）
 
 ```bash
-npm run typecheck   # tsc --noEmit
-npm test            # node:test，全部离线
-npm run build       # tsc + 复制域资产到 dist/
-npm start -- --list-domains
+npm run typecheck     # 全 workspace 类型检查
+npm test              # 全 workspace 离线单测（node:test）
+npm run build         # 全 workspace 构建与静态资产复制
+npm run smoke         # 离线 E2E 冒烟测试（mock LLM + mock MCP）
+npm run list-domains  # 校验 CLI 入口
+npm run verify        # 以上 5 项串联
 ```
 
-改完代码必须跑完这三条再提交。
+改完代码必须跑完 `npm run verify`（或 `fh verify`）再提交。
 
-## 不可破坏的架构约束
+## 全仓通用契约（C1–C11，所有脚手架与未来项目共同遵守）
 
-违反以下任何一条的改动都会被要求回退：
+完整细则与确定性检查方法见 [contracts/universal-contracts.md](contracts/universal-contracts.md)：
 
-1. **模型不产出时间值**
-   `phases` / `offlineTime` / `expireTime` / 素材起止时间一律由 executor 从 `countryTimeRef` 推导。
-   新增提示词字段时，不要加任何让模型填时间的字段。
-
-2. **版本由代码匹配**
-   `floorSetting.template.version` 由模块池自动匹配。提示词里不要要求模型写版本号。
-
-3. **工具白名单双重约束**
-   `src/orchestrator.ts` 的 `QUERY_ALLOWED_TOOLS`（代码侧，硬约束）
-   + `src/domains/<域>/skills/query/spec.md` 的工具表（提示词侧，软引导）
-   两边必须同步。只改一边会让模型看到工具却调不到，或调得动却不知道。
-
-4. **计划与执行分离**
-   计划是纯数据（必须过 JSON Schema），执行是纯代码（可并发、可重试）。
-   不要在 executor 里塞模型调用。
-
-5. **只读域必须只读**
-   `src/domains/qa/executor.ts` 显式抛错拒绝批量执行。不要给它加"顺手写一下"的能力。
-
-6. **路由失败往安全侧兜底**
-   Catalog 兜底到只读域 `qa`，不是创建域。
+1. **C1 确定性的值由代码推导**：时间、版本号、ID、金额、公式结果不让模型产出，模型只给引用键。
+2. **C2 工具白名单双重约束**：提示词侧声明与代码侧 `allowedTools` 拦截必须同步。
+3. **C3 计划与执行分离**：批量写场景下计划是过 Schema 的纯数据，执行是不含 LLM 调用的纯代码。
+4. **C4 验收由代码判定**：pass / fail 由确定性代码/探针裁决，模型只解释原因，不能改判。
+5. **C5 失败往安全侧兜底，只读显式拒写**：路由失败落只读路径；只读执行器显式抛错拒绝写操作。
+6. **C6 真值只有一条写入路径**：额外 Agent（排障/审查）只读输出结构化提议，经唯一校验路径写入。
+7. **C7 循环必有上限与无进展早停**：修复/返工/工具循环须设最大轮次，连续相同失败签名提前终止。
+8. **C8 三模式 Provider 与全离线测试**：支持 `real / mock / replay`；单测与冒烟测试不依赖网络或真实 Key。
+9. **C9 运行事件与产物外置落盘**：落盘状态、事件流与中间产物；大文本/精确数值/二进制传键不传值。
+10. **C10 不可逆写操作前可插入人工审批点**：L3+ 与外发写动作支持 `interrupt` 暂停与 `checkpoint` 续跑。
+11. **C11 严禁硬编码密钥、内网地址与内部标识**：凭证统一用 `{{ENV_VAR}}` 占位符，不把 `dist/` 提交进 git。
 
 ## 目录约定
 
-```
-src/runtime/    基础设施：MCP、LLM、会话、流水线、并发、追踪、日志
-src/domains/    业务域：每个域自带 mcp.json / brain.md / skills / schemas / pipelines
-src/prompts/    跨域提示词（目前只有 catalog.md）
-docs/           中文文档
-test/           node:test 单测，全部离线
-```
-
-域内的东西不要往 `runtime/` 放；基础设施不要往 `domains/` 放。
-
-## 写代码时
-
-- TypeScript strict + `noUncheckedIndexedAccess` 开启。数组下标访问要处理 `undefined`。
-- 新逻辑优先写成纯函数并配单测。需要 I/O 的部分留注入点（参考 `invokeSession` 的 `options.llm` / `options.pool`）。
-- 运行时只允许依赖 `yaml`。不要引入新的运行时依赖。
-- 日志用 `runtime/log.ts` 的 `log` / `logError` / `logWarn` / `logDebug`，**不要**用 `console.log`（stdout 留给结构化进度）。
-- 中文注释只写在业务语义处；标识符和工具名保持英文。
-
-## 改提示词时
-
-提示词（`*.md`）是路由和行为的控制面，改动等同于改代码：
-
-- 改了工具清单 → 同步改 `QUERY_ALLOWED_TOOLS`
-- 改了计划结构 → 同步改 `schemas/*.schema.json` 和对应 executor
-- 改了路由规则 → 注意 `catalog.md` 的规则是**严格按顺序匹配**的
-- 每个提示词都要写明「只输出 JSON」和输出契约
-
-## 测试要求
-
-新增逻辑必须有对应测试。测试不能依赖网络、API Key 或外部服务。
-
-```
-npm test   # 必须 0 失败
+```text
+playbook/               五级范式决策树、模式积木、框架选型、案例拆解（纯 Markdown）
+contracts/              通用契约 C1–C11 细则与检查方法（纯 Markdown）
+scaffolds/<paradigm>/   按范式分的独立起步脚手架（各自维护 package.json 与局部 AGENTS.md）
+.harness/ & .agents/    ShipProof 交付验真体系与 27 份 Skills
 ```
 
-## 不要做的事
-
-- 不要把密钥、内网地址、公司内部系统名写进源码或配置
-- 不要在 `mcp.json` 里写明文 Token（用 `{{ENV_VAR}}` 占位符）
-- 不要在 executor 里直接 `await` 平台接口而跳过 `gcpCall` 封装
-- 不要把 `dist/` 提交进 git
+- 根目录 `package.json` 保持 `private: true` 且**零运行时依赖**；各脚手架在自身 `AGENTS.md` 中声明各自的依赖预算。
+- TypeScript 保持 `strict` + `noUncheckedIndexedAccess`；库代码不直接 `console.log`。
 
 <!-- frontend-harness:start -->
 ## Feature work runs under frontend-harness
