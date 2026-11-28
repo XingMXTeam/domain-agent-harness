@@ -4,7 +4,7 @@
   "title": "ShipKeel M1: Repo Restructure, Playbook & Contracts",
   "phase": "implement",
   "createdAt": 1795853077807,
-  "updatedAt": 1795853347882,
+  "updatedAt": 1795853484385,
   "macroCycle": {
     "current": 1,
     "max": 5
@@ -20,9 +20,9 @@
         "REQ-2",
         "REQ-6"
       ],
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
-      "commitSha": null
+      "commitSha": "12be26470721"
     },
     {
       "id": "TASK-2",
@@ -30,9 +30,9 @@
       "requirements": [
         "REQ-4"
       ],
-      "status": "pending",
+      "status": "done",
       "attempts": 0,
-      "commitSha": null
+      "commitSha": "91d76a3dfabc"
     },
     {
       "id": "TASK-3",
@@ -78,6 +78,18 @@
       "at": 1795853347882,
       "event": "clarify-done",
       "tasks": 5
+    },
+    {
+      "at": 1795853425558,
+      "event": "task-done",
+      "task": "TASK-1",
+      "commitSha": "12be26470721"
+    },
+    {
+      "at": 1795853484385,
+      "event": "task-done",
+      "task": "TASK-2",
+      "commitSha": "91d76a3dfabc"
     }
   ],
   "lastEvaluation": null,
