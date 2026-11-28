@@ -2,16 +2,70 @@
   "version": 2,
   "feature": "shipkeel-m1",
   "title": "ShipKeel M1: Repo Restructure, Playbook & Contracts",
-  "phase": "clarify",
+  "phase": "implement",
   "createdAt": 1795853077807,
-  "updatedAt": 1795853077811,
+  "updatedAt": 1795853347882,
   "macroCycle": {
     "current": 1,
     "max": 5
   },
   "consecutivePasses": 0,
-  "clarificationComplete": false,
-  "tasks": [],
+  "clarificationComplete": true,
+  "tasks": [
+    {
+      "id": "TASK-1",
+      "title": "Migrate runtime into scaffolds/plan-execute and configure npm workspaces",
+      "requirements": [
+        "REQ-1",
+        "REQ-2",
+        "REQ-6"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "commitSha": null
+    },
+    {
+      "id": "TASK-2",
+      "title": "Author root contracts/ (C1–C11 universal contracts)",
+      "requirements": [
+        "REQ-4"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "commitSha": null
+    },
+    {
+      "id": "TASK-3",
+      "title": "Author root playbook/ (L0–L4 decision tree, pattern blocks, framework guide, and 4 case breakdowns)",
+      "requirements": [
+        "REQ-3"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "commitSha": null
+    },
+    {
+      "id": "TASK-4",
+      "title": "Rewrite root README.md and AGENTS.md for ShipKeel",
+      "requirements": [
+        "REQ-1"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "commitSha": null
+    },
+    {
+      "id": "TASK-5",
+      "title": "Update CI, ShipProof config/standards, and verify full-repo integrity",
+      "requirements": [
+        "REQ-5",
+        "REQ-6"
+      ],
+      "status": "pending",
+      "attempts": 0,
+      "commitSha": null
+    }
+  ],
   "history": [
     {
       "at": 1795853077811,
@@ -19,6 +73,11 @@
       "from": "/Users/felix/.gemini/antigravity/brain/49b3713e-f47a-4660-bf91-eb4b441d10e8/shipkeel-decisions.md",
       "requirements": 0,
       "numberingComplete": false
+    },
+    {
+      "at": 1795853347882,
+      "event": "clarify-done",
+      "tasks": 5
     }
   ],
   "lastEvaluation": null,
@@ -31,5 +90,25 @@
     "requirements": 0,
     "numberingComplete": false,
     "missingNumbers": []
-  }
+  },
+  "baseSha": "5fb7a33",
+  "rubricBaseline": {
+    "RB-1": "essential",
+    "RB-2": "essential",
+    "RB-3": "essential",
+    "RB-4": "essential",
+    "RB-5": "essential",
+    "RB-6": "essential",
+    "RB-7": "essential",
+    "RB-8": "essential",
+    "RB-9": "essential",
+    "RB-10": "essential",
+    "RB-11": "essential",
+    "RB-12": "essential",
+    "RB-13": "pitfall",
+    "RB-14": "pitfall",
+    "RB-15": "pitfall",
+    "RB-16": "important"
+  },
+  "rubricHash": "272d7c52a1022835"
 }

@@ -5,10 +5,12 @@ node_modules/
 
 # build output
 dist/
+scaffolds/*/dist/
 *.tsbuildinfo
 
 # runtime artifacts (per-run traces / logs / generated mcp configs)
 .runs/
+scaffolds/*/.runs/
 runs/
 *.log
 npm-debug.log*

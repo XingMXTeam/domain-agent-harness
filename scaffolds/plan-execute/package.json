@@ -1,0 +1,43 @@
+{
+  "name": "@shipkeel/plan-execute",
+  "version": "0.1.0",
+  "description": "ShipKeel L2 脚手架（Plan-Execute-Review + YAML 声明式流水线参考实现）：统一域路由(Catalog) + 双执行引擎(session / pipeline)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "dah": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "src",
+    "docs",
+    "knowledge",
+    "scripts/knowledge-mcp.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.10.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "tsx src/index.ts",
+    "list-domains": "tsx src/index.ts --list-domains",
+    "test": "tsx --test test/*.test.ts",
+    "test:watch": "tsx --test --watch test/*.test.ts",
+    "harness": "tsx src/index.ts",
+    "prepublishOnly": "npm run build",
+    "smoke": "npm run build && node scripts/smoke-e2e.mjs",
+    "verify": "npm run typecheck && npm test && npm run build && node scripts/smoke-e2e.mjs",
+    "demo": "npm run build && node scripts/local/demo.mjs",
+    "local:mcp": "node scripts/local/mock-platform-mcp.mjs",
+    "local:llm": "node scripts/local/mock-llm.mjs",
+    "kb:mcp": "node scripts/knowledge-mcp.mjs"
+  },
+  "author": "XingMXTeam",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "yaml": "^2.6.1"
+  }
+}

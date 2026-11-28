@@ -1,49 +1,33 @@
 {
-  "name": "domain-agent-harness",
+  "name": "shipkeel",
   "version": "0.1.0",
-  "description": "多域 Agent Harness —— 统一域路由(Catalog) + 双执行引擎(session / pipeline)，面向活动搭建、只读答疑、声明式投放流水线的开源实现",
+  "private": true,
+  "description": "ShipKeel — 做任何 Agent 之前先定下的龙骨：五级范式决策树、语言无关的通用契约与按范式分的起步脚手架",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "bin": {
-    "dah": "dist/index.js"
-  },
-  "files": [
-    "dist",
-    "src",
-    "docs",
-    "knowledge",
-    "scripts/knowledge-mcp.mjs",
-    "README.md",
-    "LICENSE"
+  "workspaces": [
+    "scaffolds/*"
   ],
   "engines": {
     "node": ">=20.10.0"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start": "tsx src/index.ts",
-    "test": "tsx --test test/*.test.ts",
-    "test:watch": "tsx --test --watch test/*.test.ts",
-    "harness": "tsx src/index.ts",
-    "prepublishOnly": "npm run build",
-    "smoke": "npm run build && node scripts/smoke-e2e.mjs",
-    "verify": "npm run typecheck && npm test && npm run build && node scripts/smoke-e2e.mjs",
-    "demo": "npm run build && node scripts/local/demo.mjs",
-    "local:mcp": "node scripts/local/mock-platform-mcp.mjs",
-    "local:llm": "node scripts/local/mock-llm.mjs",
-    "kb:mcp": "node scripts/knowledge-mcp.mjs"
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm test --workspaces --if-present",
+    "smoke": "npm run smoke --workspaces --if-present",
+    "start": "npm --workspace=@shipkeel/plan-execute start --",
+    "list-domains": "npm --workspace=@shipkeel/plan-execute run list-domains",
+    "demo": "npm --workspace=@shipkeel/plan-execute run demo --",
+    "verify": "npm run typecheck && npm test && npm run build && npm run smoke && npm run list-domains"
   },
   "keywords": [
     "agent",
+    "playbook",
+    "scaffold",
     "harness",
-    "multi-domain",
-    "orchestration",
-    "pipeline",
     "mcp",
     "llm",
-    "catalog-router"
+    "shipkeel"
   ],
   "author": "XingMXTeam",
   "license": "Apache-2.0",
@@ -51,19 +35,9 @@
     "type": "git",
     "url": "git+https://github.com/XingMXTeam/domain-agent-harness.git"
   },
-  "bugs": {
-    "url": "https://github.com/XingMXTeam/domain-agent-harness/issues"
-  },
-  "homepage": "https://github.com/XingMXTeam/domain-agent-harness#readme",
-  "dependencies": {
-    "yaml": "^2.6.1"
-  },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }
