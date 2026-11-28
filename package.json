@@ -33,7 +33,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/XingMXTeam/domain-agent-harness.git"
+    "url": "git+https://github.com/XingMXTeam/ShipKeel.git"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
