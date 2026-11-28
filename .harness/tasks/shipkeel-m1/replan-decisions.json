@@ -1,0 +1,7 @@
+[
+  {
+    "id": "RS-1",
+    "decision": "accepted",
+    "note": "Keep RB-16 for editorial quality against REF-1/ANTI-1 and fixed RB-14 shell quoting so relative Markdown path verification runs deterministically; in-repo symbol verification will be expanded as M2/M3 scaffolds land."
+  }
+]
