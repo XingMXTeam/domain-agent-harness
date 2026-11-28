@@ -23,7 +23,7 @@
     },
     {
       "id": "list-domains",
-      "command": "npm start -- --list-domains",
+      "command": "npm run list-domains",
       "description": "CLI domain listing succeeds"
     }
   ]

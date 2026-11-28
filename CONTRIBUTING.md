@@ -26,7 +26,7 @@ npm test
 
 ## 架构红线
 
-这几条是整个框架的地基，改动前请先读 [`docs/architecture.md`](docs/architecture.md)：
+通用契约见 [`contracts/universal-contracts.md`](contracts/universal-contracts.md)；L2 脚手架局部架构见 [`scaffolds/plan-execute/docs/architecture.md`](scaffolds/plan-execute/docs/architecture.md)：
 
 1. **模型不产出时间值** —— 时间由 executor 从 `countryTimeRef` 推导。
    新增字段时不要在提示词里让模型填时间。
@@ -57,7 +57,7 @@ fix(build): 排期写入前补齐缺失的 locale 排期
 
 ## 新增一个域
 
-见 [`docs/domains.md`](docs/domains.md) 的「新增一个域」。注意 `catalog.md` 的判断规则是严格按顺序匹配的，新域规则的位置很重要。
+见 [`scaffolds/plan-execute/docs/domains.md`](scaffolds/plan-execute/docs/domains.md) 的「新增一个域」。注意 `catalog.md` 的判断规则是严格按顺序匹配的，新域规则的位置很重要。
 
 ## Issue
 

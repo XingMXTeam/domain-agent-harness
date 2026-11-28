@@ -6,8 +6,8 @@
     "npm run typecheck",
     "npm test",
     "npm run build",
-    "node scripts/smoke-e2e.mjs",
-    "node dist/index.js --list-domains"
+    "npm run smoke",
+    "npm run list-domains"
   ],
   "budgets": {
     "maxMacroCycles": 5,

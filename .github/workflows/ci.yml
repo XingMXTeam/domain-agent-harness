@@ -35,13 +35,15 @@ jobs:
 
       - name: 校验构建产物包含域资产
         run: |
-          test -f dist/prompts/catalog.md
-          test -f dist/domains/build/schemas/plan.schema.json
-          test -f dist/domains/gop/pipelines/deployment.pipeline.yaml
-          test -f dist/domains/qa/skills/query/spec.md
+          test -f scaffolds/plan-execute/dist/prompts/catalog.md
+          test -f scaffolds/plan-execute/dist/domains/build/schemas/plan.schema.json
+          test -f scaffolds/plan-execute/dist/domains/gop/pipelines/deployment.pipeline.yaml
+          test -f scaffolds/plan-execute/dist/domains/qa/skills/query/spec.md
 
-      - name: 冒烟测试 CLI
-        run: node dist/index.js --list-domains
+      - name: 冒烟测试 CLI 与离线 E2E
+        run: |
+          node scaffolds/plan-execute/dist/index.js --list-domains
+          npm run smoke
 
   security:
     runs-on: ubuntu-latest

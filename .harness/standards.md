@@ -94,17 +94,12 @@ test/       node:test (or the project's runner) mirroring src/
 4. Tests that touch the network or the real home directory.
 5. `process.exit()` from library code.
 
-## 11. Project-specific invariants (`domain-agent-harness`, see `AGENTS.md`)
+## 11. Project-specific invariants (`ShipKeel`, see root `AGENTS.md` and `contracts/universal-contracts.md`)
 
-- **Runtime dependency boundary**: `dependencies` in `package.json` may only contain `yaml`. Do not add runtime dependencies.
+- **Two-layer contract boundary**:
+  - Root `AGENTS.md` and `contracts/universal-contracts.md` enforce language-agnostic universal contracts **C1–C11** across all scaffolds.
+  - Each scaffold (`scaffolds/<paradigm>/AGENTS.md`) declares its own local invariants and dependency budget (e.g., `scaffolds/plan-execute` retains `yaml` as its sole runtime dependency).
+- **Root package hygiene**: root `package.json` is `private: true` with `workspaces: ["scaffolds/*"]` and **zero** runtime `dependencies`.
 - **TypeScript strictness**: `strict` + `noUncheckedIndexedAccess` enabled; handle `undefined` on indexed access.
-- **Logging**: use `src/runtime/log.ts` (`log` / `logError` / `logWarn` / `logDebug`); never `console.log` in `src/` (stdout is reserved for structured answers).
-- **Layer separation**: keep infrastructure in `src/runtime/` and domain logic in `src/domains/<domain>/`.
-- **Six non-negotiable architectural rules**:
-  1. Models never output time values (`phases` / `offlineTime` / `expireTime` / asset windows are derived by executors from `countryTimeRef`).
-  2. Template versions are matched by code from the module pool, never guessed by prompts.
-  3. Tool allowlists are enforced on both sides (`QUERY_ALLOWED_TOOLS` in `src/orchestrator.ts` and `skills/query/spec.md`).
-  4. Plan and execution are separated: plans are pure schema-validated data; executors are pure code with no LLM calls.
-  5. Read-only domains (`src/domains/qa/executor.ts`) explicitly throw to refuse batch execution.
-  6. Routing failures fail closed to the read-only domain `qa`.
-- **Sanitization**: never commit secrets, internal URLs, internal identifiers, or `dist/`. Use `{{ENV_VAR}}` placeholders in `mcp.json`.
+- **Logging**: library/runtime code uses structured logging to stderr; never `console.log` to stdout in library paths.
+- **Sanitization (C11)**: never commit secrets, internal URLs, internal identifiers, or `dist/` / `scaffolds/*/dist/`. Use `{{ENV_VAR}}` placeholders in MCP/config files.
